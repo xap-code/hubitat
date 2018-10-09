@@ -24,8 +24,6 @@ metadata {
     command "fav4"
     command "fav5"
     command "fav6"
-    command "playTrackAndResume", ["string", "number", "number"]
-    command "playTrackAndRestore", ["string", "number", "number"]
     command "playTrackAtVolume", ["string","number"]
   }
 }
@@ -203,24 +201,6 @@ def playTrack(trackToPlay) {
 }
 def playTrackAtVolume(uri, volume) {
   log.debug "Executing 'playTrackAtVolume'"
-  setVolume(volume)
-  playUri(uri)
-}
-def playTrackAndResume(uri, duration) {
-  log.debug "Executing 'playTrackAndResume'"
-  playUri(uri)
-}
-def playTrackAndResume(uri, duration, volume) {
-  log.debug "Executing 'playTrackAndResume'"
-  setVolume(volume)
-  playUri(uri)
-}
-def playTrackAndRestore(uri, duration) {
-  log.debug "Executing 'playTrackAndRestore"
-  playUri(uri)
-}
-def playTrackAndRestore(uri, duration, volume) {
-  log.debug "Executing 'playTrackAndRestore"
   setVolume(volume)
   playUri(uri)
 }
