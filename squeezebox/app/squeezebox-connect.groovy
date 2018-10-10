@@ -22,9 +22,10 @@ preferences {
     }
   }
   page(name: "playersPage", title: "Select Squeezebox Players", nextPage: "optionsPage", install: false, uninstall: true)
-  page(name: "optionsPage", title: "Configure Options", install: true, uninstall: false) {
+  page(name: "optionsPage", title: "Options", install: true, uninstall: false) {
     section("Refresh Interval") {
-      paragraph("Number of seconds between each call to the Squeezebox Server to update players' status. If you want to display player status from Hubitat or build rules that react quickly to changes in player status then use low values e.g. 2. If you are just sending commands to the players then higher values are recommended.")
+      paragraph("Number of seconds between each call to the Squeezebox Server to update players' status.")
+      paragraph("If you want to display player status from Hubitat or build rules that react quickly to changes in player status then use low values e.g. 2. If you are just sending commands to the players then higher values are recommended.")
       input(name: "refreshSeconds", type: "enum", options: [2, 4, 10, 30, 60], required: true, title: "Players Status Refresh Interval")
     }
   }
@@ -45,7 +46,9 @@ def playersPage() {
       input(name: "selectedPlayers", type: "enum", title: "Select Players (${playerNames.size()} found)", multiple: true, options: playerNames)
     }
     section("Device Naming (optional)") {
-      paragraph("If configured, adds the specified suffix to each player device name when creating child devices for each Squeezebox")
+      paragraph("If configured, adds the specified prefix before each player device name when creating child devices for each Squeezebox")
+        input(name: "deviceNamePrefix", type: "string", title: "Device Name Prefix", required: false)
+      paragraph("If configured, adds the specified suffix after each player device name when creating child devices for each Squeezebox")
       input(name: "deviceNameSuffix", type: "string", title: "Device Name Suffix", required: false)
     }
   }
@@ -92,7 +95,8 @@ def initializePlayers() {
   selected?.each {
     def player = getChildDevice(it.mac)
     if (!player) {
-      def playerName = deviceNameSuffix ? "${it.name} ${deviceNameSuffix}" : it.name
+      def prefixedPlayerName = deviceNamePrefix ? "${deviceNamePrefix} ${it.name}" : it.name
+      def playerName = deviceNameSuffix ? "${prefixedPlayerName} ${deviceNameSuffix}" : prefixedPlayerName
       player = addChildDevice(
         "xap", 
         "Squeezebox Player", 
@@ -254,3 +258,5 @@ def buildJsonRequest(params) {
 
   json
 }
+
+
