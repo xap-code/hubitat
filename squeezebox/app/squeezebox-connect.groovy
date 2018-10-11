@@ -46,11 +46,11 @@ def playersPage() {
       input(name: "selectedPlayers", type: "enum", title: "Select Players (${playerNames.size()} found)", multiple: true, options: playerNames)
     }
     section("Device Naming (optional)") {
-      paragraph("If configured, adds the specified prefix before each player device name when creating child devices for each Squeezebox")
+      paragraph("If configured, adds the specified prefix before each player device name when creating child devices for each Squeezebox.")
       input(name: "deviceNamePrefix", type: "string", title: "Device Name Prefix", required: false)
-      paragraph("If configured, adds the specified suffix after each player device name when creating child devices for each Squeezebox")
+      paragraph("If configured, adds the specified suffix after each player device name when creating child devices for each Squeezebox.")
       input(name: "deviceNameSuffix", type: "string", title: "Device Name Suffix", required: false)
-      paragraph("NB: Spaces need to be explicitly included if required")
+      paragraph("NB: Spaces need to be explicitly included if required.")
     }
   }
 }
