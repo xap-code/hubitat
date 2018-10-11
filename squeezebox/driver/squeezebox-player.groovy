@@ -9,22 +9,28 @@ metadata {
 
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
     capability "Actuator"
-    capability "Music Player"
+    capability "MusicPlayer"
     capability "Refresh"
     capability "Sensor"
+    capability "Speech Synthesis"
     capability "Switch"
 
     attribute "serverHostAddress", "string"
     attribute "playerMAC", "string"
 
-    command "playFavorite", ["number"]
     command "fav1"
     command "fav2"
     command "fav3"
     command "fav4"
     command "fav5"
     command "fav6"
+    command "playFavorite", ["number"]
+    command "playTextAndRestore", ["string","number"]
+	  command "playTextAndResume", ["string","number"]
+    command "playTrackAndRestore", ["string", "number", "number"]
+    command "playTrackAndResume", ["string", "number", "number"]
     command "playTrackAtVolume", ["string","number"]
+    command "speak", ["string"]
   }
 }
 
@@ -39,7 +45,7 @@ def configure(serverHostAddress, playerMAC) {
 
 def processJsonMessage(msg) {
 
-  log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
+  //log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
 
   def command = msg.params[1][0]
 
@@ -155,7 +161,7 @@ def unmute() {
 
 //--- Playback
 def setPlaybackStatus() {
-  log.debug "Executing 'setPlaybackStatus'"
+  log.debug "setPlaybackStatus not implemented"
   // TODO: handle 'setPlaybackStatus' command
 }
 def play() {
@@ -184,16 +190,13 @@ def previousTrack() {
   refresh() 
 }
 def setTrack(trackToSet) {
-  log.debug "Executing 'setTrack'"
-  // TODO: handle 'setTrack' command
+  log.debug "setTrack not implemented"
 }
 def resumeTrack(trackToResume) {
-  log.debug "Executing 'resumeTrack'"
-  // TODO: handle 'resumeTrack' command
+  log.debug "resumeTrack not implemented"
 }
 def restoreTrack(trackToRestore) {
-  log.debug "Executing 'restoreTrack'"
-  // TODO: handle 'restoreTrack' command
+  log.debug "restoreTrack not implemented"
 }
 def playTrack(trackToPlay) {
   log.debug "Executing 'playTrack'"
@@ -208,6 +211,43 @@ def playUri(uri) {
   executeCommand(["playlist", "play", uri])
   refresh()  
 }
+
+//--- resume/restore methods
+private previewAndGetDelay(uri, duration, volume=null) {
+  executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
+  if (volume != null) {
+    state.previousVolume = device.currentValue("level");
+    setVolume(volume)
+  }
+  return 2 + duration as int
+}
+def resume() {
+  log.debug "Resuming temp playlist"
+  def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
+  executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
+  if (state.previousVolume) {
+    setVolume(state.previousVolume)
+  }
+  refresh()
+}
+def restore() {
+  log.debug "Restoring temp playlist"
+  def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
+  executeCommand(["playlist", "preview", "cmd:stop"])
+  refresh()
+}
+
+def playTrackAndResume(uri, duration, volume=null) {
+  log.debug "Executing 'playTrackAndResume'"
+  def delay = previewAndGetDelay(uri, duration, volume)
+  runIn(delay, resume)
+}
+def playTrackAndRestore(uri, duration, volume=null) {
+  log.debug "Executing 'playTrackAndRestore"
+  def delay = previewAndGetDelay(uri, duration, volume)
+  runIn(delay, restore)
+}
+
 //--- Favorites
 def playFavorite(index) {
   log.debug "Playing favorite ${index}"
@@ -221,6 +261,34 @@ def fav3() { playFavorite(3) }
 def fav4() { playFavorite(4) }
 def fav5() { playFavorite(5) }
 def fav6() { playFavorite(6) }
+
+//--- Speech
+private getTts(text) {
+  if (text) {
+    textToSpeech(text)
+  } else {
+    log.warning "No text provided for speak() method"
+  }
+}
+
+def speak(text) {
+  def tts = getTts(text)
+  if (tts) {
+    playUri(tts.uri)
+  }
+}
+def playTextAndRestore(text, volume=null) {
+  def tts = getTts(text)
+  if (tts) {
+    playTrackAndRestore(tts.uri, tts.duration, volume)
+  }
+}
+def playTextAndResume(text, volume=null) {
+  def tts = getTts(text)
+  if (tts) {
+    playTrackAndResume(tts.uri, tts.duration, volume)
+  }
+}
 
 /*******************
  * Utility Methods *
