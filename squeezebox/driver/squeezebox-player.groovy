@@ -26,7 +26,7 @@ metadata {
     command "fav6"
     command "playFavorite", ["NUMBER"]
     command "playTextAndRestore", ["STRING","NUMBER"]
-	command "playTextAndResume", ["STRING","NUMBER"]
+    command "playTextAndResume", ["STRING","NUMBER"]
     command "playTrackAndRestore", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAndResume", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAtVolume", ["STRING","NUMBER"]
