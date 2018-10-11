@@ -24,13 +24,13 @@ metadata {
     command "fav4"
     command "fav5"
     command "fav6"
-    command "playFavorite", ["number"]
-    command "playTextAndRestore", ["string","number"]
-	  command "playTextAndResume", ["string","number"]
-    command "playTrackAndRestore", ["string", "number", "number"]
-    command "playTrackAndResume", ["string", "number", "number"]
-    command "playTrackAtVolume", ["string","number"]
-    command "speak", ["string"]
+    command "playFavorite", ["NUMBER"]
+    command "playTextAndRestore", ["STRING","NUMBER"]
+	command "playTextAndResume", ["STRING","NUMBER"]
+    command "playTrackAndRestore", ["STRING", "NUMBER", "NUMBER"]
+    command "playTrackAndResume", ["STRING", "NUMBER", "NUMBER"]
+    command "playTrackAtVolume", ["STRING","NUMBER"]
+    command "speak", ["STRING"]
   }
 }
 
@@ -129,12 +129,10 @@ def refresh() {
 
 //--- Power
 def on() {
-  log.debug "Executing 'on'"
   executeCommand(["power", 1])
   refresh()
 }
 def off() {
-  log.debug "Executing 'off'"
   executeCommand(["power", 0])
   refresh()  
 }
@@ -144,66 +142,53 @@ private setVolume(volume) {
   executeCommand(["mixer", "volume", volume])
 }
 def setLevel(level) {
-  log.debug "Executing 'setLevel'"
   setVolume(level)
   refresh()
 }
 def mute() {
-  log.debug "Executing 'mute'"
   executeCommand(["mixer", "muting", 1])
   refresh() 
 }
 def unmute() {
-  log.debug "Executing 'unmute'"
   executeCommand(["mixer", "muting", 0])
   refresh() 
 }
 
 //--- Playback
-def setPlaybackStatus() {
-  log.debug "setPlaybackStatus not implemented"
-  // TODO: handle 'setPlaybackStatus' command
-}
 def play() {
-  log.debug "Executing 'play'"
   executeCommand(["play"])
   refresh()
 }
 def pause() {
-  log.debug "Executing 'pause'"
   executeCommand(["pause"])
   refresh() 
 }
 def stop() {
-  log.debug "Executing 'stop'"
   executeCommand(["stop"])
   refresh() 
 }
 def nextTrack() {
-  log.debug "Executing 'nextTrack'"
   executeCommand(["playlist", "jump", "+1"])
   refresh()  
 }
 def previousTrack() {
-  log.debug "Executing 'previousTrack'"
   executeCommand(["playlist", "jump", "-1"])
   refresh() 
 }
 def setTrack(trackToSet) {
-  log.debug "setTrack not implemented"
+  executeCommand(["playlist", "stop", trackToSet])
+  stop()  
 }
 def resumeTrack(trackToResume) {
-  log.debug "resumeTrack not implemented"
+  playUri(trackToResume)
 }
 def restoreTrack(trackToRestore) {
-  log.debug "restoreTrack not implemented"
+  playUri(trackToRestore)
 }
 def playTrack(trackToPlay) {
-  log.debug "Executing 'playTrack'"
   playUri(trackToPlay)
 }
 def playTrackAtVolume(uri, volume) {
-  log.debug "Executing 'playTrackAtVolume'"
   setVolume(volume)
   playUri(uri)
 }
@@ -222,7 +207,6 @@ private previewAndGetDelay(uri, duration, volume=null) {
   return 2 + duration as int
 }
 def resume() {
-  log.debug "Resuming temp playlist"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
   if (state.previousVolume) {
@@ -231,26 +215,22 @@ def resume() {
   refresh()
 }
 def restore() {
-  log.debug "Restoring temp playlist"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "preview", "cmd:stop"])
   refresh()
 }
 
 def playTrackAndResume(uri, duration, volume=null) {
-  log.debug "Executing 'playTrackAndResume'"
   def delay = previewAndGetDelay(uri, duration, volume)
   runIn(delay, resume)
 }
 def playTrackAndRestore(uri, duration, volume=null) {
-  log.debug "Executing 'playTrackAndRestore"
   def delay = previewAndGetDelay(uri, duration, volume)
   runIn(delay, restore)
 }
 
 //--- Favorites
 def playFavorite(index) {
-  log.debug "Playing favorite ${index}"
   executeCommand(["favorites", "playlist", "play", "item_id:${index - 1}"])
   refresh() 
 }
@@ -271,7 +251,7 @@ private getTts(text) {
   }
 }
 
-def speak(text) {
+def playText(text) {
   def tts = getTts(text)
   if (tts) {
     playUri(tts.uri)
@@ -288,6 +268,9 @@ def playTextAndResume(text, volume=null) {
   if (tts) {
     playTrackAndResume(tts.uri, tts.duration, volume)
   }
+}
+def speak(text) {
+  playText(text)
 }
 
 /*******************
