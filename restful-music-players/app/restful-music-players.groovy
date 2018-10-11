@@ -1,8 +1,5 @@
 /**
  *  RESTful Music Players
- *
- *  Copyright 2017 Ben Deitch
- *
  */
 definition(
   name: "RESTful Music Players",
