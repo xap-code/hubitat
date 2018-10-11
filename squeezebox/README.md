@@ -20,7 +20,7 @@ C: Install App
 4. Enter the port number for LMS (usually 9000 or 9002)
 5. Click Next
 6. The app will query the server for available players, select the players you want to integrate into Hubitat.
-7. (optional) Add a suffix that the app will append to the end of each player's device name when creating them (e.g. "Player")
+7. (optional) Add a prefix and/or suffix that the app will add to each player's device name when creating them (e.g. suffix: " Player")
 8. Click Next
 9. Choose the refresh interval (the number of seconds) between each call the app makes to LMS to get the current status of the players. 
 10. Click Done
