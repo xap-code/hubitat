@@ -47,9 +47,10 @@ def playersPage() {
     }
     section("Device Naming (optional)") {
       paragraph("If configured, adds the specified prefix before each player device name when creating child devices for each Squeezebox")
-        input(name: "deviceNamePrefix", type: "string", title: "Device Name Prefix", required: false)
+      input(name: "deviceNamePrefix", type: "string", title: "Device Name Prefix", required: false)
       paragraph("If configured, adds the specified suffix after each player device name when creating child devices for each Squeezebox")
       input(name: "deviceNameSuffix", type: "string", title: "Device Name Suffix", required: false)
+      paragraph("NB: Spaces need to be explicitly included if required")
     }
   }
 }
@@ -95,8 +96,8 @@ def initializePlayers() {
   selected?.each {
     def player = getChildDevice(it.mac)
     if (!player) {
-      def prefixedPlayerName = deviceNamePrefix ? "${deviceNamePrefix} ${it.name}" : it.name
-      def playerName = deviceNameSuffix ? "${prefixedPlayerName} ${deviceNameSuffix}" : prefixedPlayerName
+      def prefixedPlayerName = deviceNamePrefix ? "${deviceNamePrefix}${it.name}" : it.name
+      def playerName = deviceNameSuffix ? "${prefixedPlayerName}${deviceNameSuffix}" : prefixedPlayerName
       player = addChildDevice(
         "xap", 
         "Squeezebox Player", 
@@ -258,5 +259,3 @@ def buildJsonRequest(params) {
 
   json
 }
-
-
