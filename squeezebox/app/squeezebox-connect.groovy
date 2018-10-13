@@ -15,24 +15,33 @@ definition(
   iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@3x.png")
 
 preferences {
-  page(name: "serverPage", title: "Configure Squeezebox Server", nextPage: "playersPage", install: false, uninstall: true) {
+  page(name: "serverPage", title: "Configure Squeezebox Server", nextPage: "optionsPage", install: false, uninstall: true) {
     section("Connection Details") {
       input(name: "serverIP", type: "text", required: true, title: "Server IP Address")
       input(name: "serverPort", type: "number", required: true, title: "Server Port Number")
     }
   }
-  page(name: "playersPage", title: "Select Squeezebox Players", nextPage: "optionsPage", install: false, uninstall: true)
-  page(name: "optionsPage", title: "Options", install: true, uninstall: false) {
+  page(name: "optionsPage", title: "Options", nextPage: "playersPage", install: false, uninstall: false) {
     section("Refresh Interval") {
       paragraph("Number of seconds between each call to the Squeezebox Server to update players' status.")
       paragraph("If you want to display player status from Hubitat or build rules that react quickly to changes in player status then use low values e.g. 2. If you are just sending commands to the players then higher values are recommended.")
       input(name: "refreshSeconds", type: "enum", options: [2, 4, 10, 30, 60], required: true, title: "Players Status Refresh Interval")
     }
+    section("Security (optional)") {
+      paragraph("If you have enabled password protection on the Squeezebox Server then you can enter the authentication details here.")
+      input(name: "passwordProtection", type: "enum", options: ["Password Protection", "No Password Protection"], required: false, title: "Password Protection")
+      input(name: "username", type: "text", required: false, title: "Username")
+      input(name: "password", type: "password", required: false, title: "Password")
+    }
   }
+  page(name: "playersPage", title: "Select Squeezebox Players", install: true, uninstall: true)
 }
 
 def playersPage() {
 
+  // set the authorization token
+  state.auth = buildAuth()
+    
   // send the server status request so that the connectedPlayers property can be populated from the response
   getServerStatus()
   
@@ -82,12 +91,22 @@ def initialize() {
   scheduleServerStatus()
 }
 
+def buildAuth() {
+    
+    if (passwordProtection != "Password Protection") {
+        return null
+    }
+    
+    def auth = "${username}:${password}"
+    auth.bytes.encodeBase64().toString()
+}
+
 def initializePlayers() {
 
   def hub = location.hubs[0].id
     
   def serverHostAddress = "${serverIP}:${serverPort}"
-
+    
   // build selected and unselected lists by comparing the selected names to the connectedPlayers state property
   def selected = state.connectedPlayers?.findAll { selectedPlayers.contains(it.name) }
   def unselected = state.connectedPlayers?.findAll { !selected.contains(it) }
@@ -105,8 +124,9 @@ def initializePlayers() {
         hub,
         ["name": playerName, "label": playerName]
       )
-      player.configure(serverHostAddress, it.mac)
     }
+    // always configure the player in case the server settings have changed
+    player.configure(serverHostAddress, it.mac, state.auth)
   }
     // delete any child devices for players that are no longer selected
   unselected?.each {
@@ -240,6 +260,10 @@ def executeCommand(params) {
     path: "jsonrpc.js",
     body: jsonBody.toString()
   ]
+    
+  if (state.auth) {
+    postParams.headers = ["Authorization": "Basic ${state.auth}"]
+  }
      
   httpPost(postParams) { resp ->
     processJsonMessage(resp.data)
