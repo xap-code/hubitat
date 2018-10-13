@@ -34,18 +34,20 @@ metadata {
   }
 }
 
-def configure(serverHostAddress, playerMAC) {
+def configure(serverHostAddress, playerMAC, auth) {
 
   state.serverHostAddress = serverHostAddress
   sendEvent(name: "serverHostAddress", value: state.serverHostAddress, displayed: false, isStateChange: true)
 
   state.playerMAC = playerMAC
   sendEvent(name: "playerMAC", value: state.playerMAC, displayed: false, isStateChange: true)
+    
+  state.auth = auth
 }
 
 def processJsonMessage(msg) {
 
-  //log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
+  log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
 
   def command = msg.params[1][0]
 
@@ -287,6 +289,10 @@ private executeCommand(params) {
     path: "jsonrpc.js",
     body: jsonBody.toString()
   ]
+    
+  if (state.auth) {
+    postParams.headers = ["Authorization": "Basic ${state.auth}"]
+  }
      
   httpPost(postParams) { resp ->
     processJsonMessage(resp.data)
