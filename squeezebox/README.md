@@ -19,10 +19,11 @@ C: Install App
 3. Enter the IP Address of the machine running your Squeezebox Server (LMS) software (this needs to have a fixed IP address).
 4. Enter the port number for LMS (usually 9000 or 9002)
 5. Click Next
-6. The app will query the server for available players, select the players you want to integrate into Hubitat.
-7. (optional) Add a prefix and/or suffix that the app will add to each player's device name when creating them (e.g. suffix: "&nbsp;Player")
+6. Choose the refresh interval (the number of seconds) between each call the app makes to LMS to get the current status of the players. 
+7. If you are using password protection on LMS then select "Password Protection" and enter the username and password.
 8. Click Next
-9. Choose the refresh interval (the number of seconds) between each call the app makes to LMS to get the current status of the players. 
-10. Click Done
+9. The app will query the server for available players, select the players you want to integrate into Hubitat.
+10. (optional) Add a prefix and/or suffix that the app will add to each player's device name when creating them (e.g. suffix: "&nbsp;Player")
+11. Click Done
 
 NB: The app only gets detailed information for players that are switched on but it does make a call to LMS after each interval. If you are displaying current player status based on the information in Hubitat (e.g. on a dashboard) or if you want to trigger rules from changes in player state then you should choose a low number of seconds for the refresh interval (2 is recommended). However, if you are just using Hubitat to control the players and don't need quick updates from external changes then a higher number is fine and will generate less network traffic. The state of the player device is immediately updated when you make a change via Hubitat regardless of this setting.
