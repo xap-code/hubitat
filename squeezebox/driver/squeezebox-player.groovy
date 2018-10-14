@@ -285,8 +285,6 @@ private captureAndChangeVolume(volume) {
   if (volume != null) {
     state.previousVolume = device.currentValue("level");
     setVolume(volume)
-  } else {
-    state.previousVolume = null
   }
 }
 
