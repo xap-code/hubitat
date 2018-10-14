@@ -38,8 +38,14 @@ metadata {
   }
 }
 
-def configure(serverHostAddress, playerMAC, auth) {
+def log(message) {
+  if (getParent().debugLogging) {
+    log.debug message
+  }
+}
 
+def configure(serverHostAddress, playerMAC, auth) {
+    
   state.serverHostAddress = serverHostAddress
   sendEvent(name: "serverHostAddress", value: state.serverHostAddress, displayed: false, isStateChange: true)
 
@@ -47,11 +53,13 @@ def configure(serverHostAddress, playerMAC, auth) {
   sendEvent(name: "playerMAC", value: state.playerMAC, displayed: false, isStateChange: true)
     
   state.auth = auth
+    
+  log "Configured with [serviceHostAddress: ${serverHostAddress}, playerMAC: ${playerMAC}, auth: ${auth}]"
 }
 
 def processJsonMessage(msg) {
 
-  //log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
+  log "Squeezebox Player Received [${device.name}]: ${msg}"
 
   def command = msg.params[1][0]
 
@@ -148,11 +156,13 @@ def refresh() {
 
 //--- Power
 def on() {
+  log "on()"
   executeCommand(["power", 1])
   refresh()
 }
 
 def off() {
+  log "off()"
   executeCommand(["power", 0])
   refresh()  
 }
@@ -163,71 +173,89 @@ private setVolume(volume) {
 }
 
 def setLevel(level) {
+  log "setLevel(${level})"
   setVolume(level)
   refresh()
 }
 
 def mute() {
+  log "mute()"
   executeCommand(["mixer", "muting", 1])
   refresh() 
 }
 
 def unmute() {
+  log "unmute()"
   executeCommand(["mixer", "muting", 0])
   refresh() 
 }
 
 //--- Playback
+private executePlayAndRefresh(uri) {
+  executeCommand(["playlist", "play", uri])
+  refresh()  
+}
+
 def play() {
+  log "play()"
   executeCommand(["play"])
   refresh()
 }
 
 def pause() {
+  log "pause()"
   executeCommand(["pause"])
   refresh() 
 }
 
 def stop() {
+  log "stop()"
   executeCommand(["stop"])
   refresh() 
 }
 
 def nextTrack() {
+  log "nextTrack()"
   executeCommand(["playlist", "jump", "+1"])
   refresh()  
 }
 
 def previousTrack() {
+  log "previousTrack()"
   executeCommand(["playlist", "jump", "-1"])
   refresh() 
 }
 
 def setTrack(trackToSet) {
+  log "setTrack(\"${trackToSet}\")"
   executeCommand(["playlist", "stop", trackToSet])
   stop()  
 }
 
 def resumeTrack(trackToResume) {
-  playUri(trackToResume)
+  log "resumeTrack(\"${trackToResume}\")"
+  executePlayAndRefresh(trackToResume)
 }
 
 def restoreTrack(trackToRestore) {
-  playUri(trackToRestore)
+  log "restoreTrack(\"${trackToRestore}\")"
+  executePlayAndRefresh(trackToRestore)
 }
 
 def playTrack(trackToPlay) {
-  playUri(trackToPlay)
+  log "playTrack(\"${trackToPlay}\")"
+  executePlayAndRefresh(trackToPlay)
 }
 
 def playTrackAtVolume(uri, volume) {
+  log "playTrackAtVolume(\"${uri}\", ${volume})"
   setVolume(volume)
-  playUri(uri)
+  executePlayAndRefresh(uri)
 }
 
 def playUri(uri) {
-  executeCommand(["playlist", "play", uri])
-  refresh()  
+  log "playUri(\"${uri}\")"
+  executePlayAndRefresh(uri)
 }
 
 //--- resume/restore methods
@@ -241,6 +269,7 @@ private previewAndGetDelay(uri, duration, volume=null) {
 }
 
 def resume() {
+  log "resume()"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
   if (state.previousVolume) {
@@ -250,23 +279,27 @@ def resume() {
 }
 
 def restore() {
+  log "restore()"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "preview", "cmd:stop"])
   refresh()
 }
 
 def playTrackAndResume(uri, duration, volume=null) {
+  log "playTrackAndResume(\"${uri}\", ${duration}, ${volume})"
   def delay = previewAndGetDelay(uri, duration, volume)
   runIn(delay, resume)
 }
 
 def playTrackAndRestore(uri, duration, volume=null) {
+  log "playTrackAndRestore(\"${uri}\", ${duration}, ${volume})"
   def delay = previewAndGetDelay(uri, duration, volume)
   runIn(delay, restore)
 }
 
 //--- Favorites
 def playFavorite(index) {
+  log "playFavorite(${index})"
   executeCommand(["favorites", "playlist", "play", "item_id:${index - 1}"])
   refresh() 
 }
@@ -288,13 +321,15 @@ private getTts(text) {
 }
 
 def playText(text) {
+  log "playText(\"${text}\")"
   def tts = getTts(text)
   if (tts) {
-    playUri(tts.uri)
+    executePlayAndRefresh(tts.uri)
   }
 }
 
 def playTextAndRestore(text, volume=null) {
+  log "playTextAndRestore(\"${text}\", ${volume})"
   def tts = getTts(text)
   if (tts) {
     playTrackAndRestore(tts.uri, tts.duration, volume)
@@ -302,6 +337,7 @@ def playTextAndRestore(text, volume=null) {
 }
 
 def playTextAndResume(text, volume=null) {
+  log "playTextAndResume(\"${text}\", ${volume})"
   def tts = getTts(text)
   if (tts) {
     playTrackAndResume(tts.uri, tts.duration, volume)
@@ -309,6 +345,7 @@ def playTextAndResume(text, volume=null) {
 }
 
 def speak(text) {
+  log "speak(\"${text}\")"
   playText(text)
 }
 
@@ -319,6 +356,7 @@ private getPlayerMacs(players) {
 }
 
 def sync(slaves) {
+  log "sync(\"${slaves}\")"
   def parent = getParent()
   def slaveMacs = getPlayerMacs(slaves.tokenize(","))
   if (slaveMacs) {
@@ -328,11 +366,13 @@ def sync(slaves) {
 }
 
 def unsync() {
+  log "unsync()"
   executeCommand(["sync", "-"])
   refresh()
 }
 
 def unsyncAll() {
+  log "unsyncAll()"
   def syncGroupMacs = getPlayerMacs(state.syncGroup)
   if (syncGroupMacs) {
     getParent().unsyncAll(syncGroupMacs)
@@ -343,7 +383,7 @@ def unsyncAll() {
  * Utility Methods *
  *******************/
 private executeCommand(params) {
-  //log.debug "Squeezebox Send: ${params}"
+  log "Squeezebox Player Send [${device.name}]: ${params}"
     
   def jsonBody = buildJsonRequest(params)
    

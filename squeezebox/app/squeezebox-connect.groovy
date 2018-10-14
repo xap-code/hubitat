@@ -15,26 +15,30 @@ definition(
   iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@3x.png")
 
 preferences {
-  page(name: "serverPage", title: "Configure Squeezebox Server", nextPage: "optionsPage", install: false, uninstall: true) {
-    section("Connection Details") {
+  page(name: "serverPage", title: "<h2>Configure Squeezebox Server</h2>", nextPage: "optionsPage", install: false, uninstall: true) {
+    section("<h3>Connection Details</h3>") {
       input(name: "serverIP", type: "text", required: true, title: "Server IP Address")
       input(name: "serverPort", type: "number", required: true, title: "Server Port Number")
     }
   }
-  page(name: "optionsPage", title: "Options", nextPage: "playersPage", install: false, uninstall: false) {
-    section("Refresh Interval") {
+  page(name: "optionsPage", title: "<h2>Options</h2>", nextPage: "playersPage", install: false, uninstall: false) {
+    section("<h3>Refresh Interval</h3>") {
       paragraph("Number of seconds between each call to the Squeezebox Server to update players' status.")
       paragraph("If you want to display player status from Hubitat or build rules that react quickly to changes in player status then use low values e.g. 2. If you are just sending commands to the players then higher values are recommended.")
       input(name: "refreshSeconds", type: "enum", options: [2, 4, 10, 30, 60], required: true, title: "Players Status Refresh Interval")
     }
-    section("Security (optional)") {
+    section("<h3>Security (optional)</h3>") {
       paragraph("If you have enabled password protection on the Squeezebox Server then you can enter the authentication details here.")
       input(name: "passwordProtection", type: "enum", options: ["Password Protection", "No Password Protection"], required: false, title: "Password Protection")
       input(name: "username", type: "text", required: false, title: "Username")
       input(name: "password", type: "password", required: false, title: "Password")
     }
+    section("<h3>Other Settings</h3>") {
+      paragraph("Enables/disables debug logging for the Squeezebox Connect app and all the Squeezebox Player child devices.")
+      input "debugLogging", "bool", title: "Enable debug logging?", defaultValue: false, required: false
+    }
   }
-  page(name: "playersPage", title: "Select Squeezebox Players", install: true, uninstall: true)
+  page(name: "playersPage", title: "<h2>Select Squeezebox Players</h2>", install: true, uninstall: true)
 }
 
 def playersPage() {
@@ -50,17 +54,23 @@ def playersPage() {
   def playerRefreshInterval = playerNames?.isEmpty() ? 4 : null
     
   dynamicPage(name: "playersPage", refreshInterval: playerRefreshInterval) {
-    section("Connected Players") {
+    section("<h3>Connected Players</h3>") {
       paragraph("Select the players you want to integrate to Hubitat:")
       input(name: "selectedPlayers", type: "enum", title: "Select Players (${playerNames.size()} found)", multiple: true, options: playerNames)
     }
-    section("Device Naming (optional)") {
+    section("<h3>Device Naming (optional)</h3>") {
       paragraph("If configured, adds the specified prefix before each player device name when creating child devices for each Squeezebox.")
       input(name: "deviceNamePrefix", type: "string", title: "Device Name Prefix", required: false)
       paragraph("If configured, adds the specified suffix after each player device name when creating child devices for each Squeezebox.")
       input(name: "deviceNameSuffix", type: "string", title: "Device Name Suffix", required: false)
       paragraph("NB: Spaces need to be explicitly included if required.")
     }
+  }
+}
+
+def log(message) {
+  if (debugLogging) {
+    log.debug message
   }
 }
 
@@ -117,6 +127,9 @@ def initializePlayers() {
     if (!player) {
       def prefixedPlayerName = deviceNamePrefix ? "${deviceNamePrefix}${it.name}" : it.name
       def playerName = deviceNameSuffix ? "${prefixedPlayerName}${deviceNameSuffix}" : prefixedPlayerName
+
+      log "Add child device [${playerName} > ${it.mac}]"
+
       player = addChildDevice(
         "xap", 
         "Squeezebox Player", 
@@ -132,6 +145,9 @@ def initializePlayers() {
   unselected?.each {
     def player = getChildDevice(it.mac)
     if (player) {
+
+      log "Delete child device [${player.name} > ${it.mac}]"
+
       deleteChildDevice(it.mac)
     }
   }
@@ -185,7 +201,7 @@ def getServerStatus58() { getServerStatus() }
 
 def processJsonMessage(msg) {
 
-  //log.debug "Squeezebox Connect Message [${msg.params[0]}]: ${msg}"
+  log "Squeezebox Connect Received [${msg.params[0]}]: ${msg}"
 
   def playerId = msg.params[0]
   if (playerId == "") {
@@ -272,7 +288,8 @@ def unsyncAll(playerMacs) {
  *******************/
  
 def executeCommand(params) {
-   //log.debug "Squeezebox Send: ${params}"
+
+  log "Squeezebox Connect Send: ${params}"
     
   def jsonBody = buildJsonRequest(params)
    
