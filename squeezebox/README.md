@@ -41,8 +41,8 @@ unsync()
 unsyncAll()
 - If the player is in a sync group, calls unsync() on all members of the group, removing the sync group.
 
-Example: create a virtual switch to allow you synchronise and unsynchronise your players
-----------------------------------------------------------------------------------------
+Example: create a virtual switch to allow you to synchronise and unsynchronise your players
+-------------------------------------------------------------------------------------------
 
 A: Create the virtual switch
 
