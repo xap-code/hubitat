@@ -28,6 +28,10 @@ C: Install App
 
 NB: The app only gets detailed information for players that are switched on but it does make a call to LMS after each interval. If you are displaying current player status based on the information in Hubitat (e.g. on a dashboard) or if you want to trigger rules from changes in player state then you should choose a low number of seconds for the refresh interval (2 is recommended). However, if you are just using Hubitat to control the players and don't need quick updates from external changes then a higher number is fine and will generate less network traffic. The state of the player device is immediately updated when you make a change via Hubitat regardless of this setting.
 
+Debug Logging
+=============
+You can enable/disable debug logging in the Squeezebox Connect app preferences. If you have multiple players then they can generate quite a lot of log data so it is strongly recommended to deactivate the debug logging unless you need it to troubleshoot something for example.
+
 Extra Commands
 ==============
 This integration exposes some extra Player device commands specific to Squeezebox.
