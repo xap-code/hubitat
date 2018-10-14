@@ -373,7 +373,8 @@ def unsync() {
 
 def unsyncAll() {
   log "unsyncAll()"
-  def syncGroupMacs = getPlayerMacs(state.syncGroup)
+  def slaves = state.syncGroup?.findAll { it != device.name }
+  def syncGroupMacs = getPlayerMacs(slaves)
   if (syncGroupMacs) {
     getParent().unsyncAll(syncGroupMacs)
   }
