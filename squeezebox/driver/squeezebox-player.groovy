@@ -5,8 +5,12 @@
  *
  */
 
+/* ChangeLog:
+ * 13/10/2018 - Added support for password protection
+ * 14/10/2018 - Added support for player synchronization
+ * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
+ */
 metadata {
-
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
     capability "Actuator"
     capability "MusicPlayer"
@@ -66,6 +70,10 @@ def processJsonMessage(msg) {
   switch (command) {
     case "status":
       processStatus(msg)
+      break
+    case "time":
+      processTime(msg)
+      break
   }
 }
 
@@ -83,6 +91,10 @@ private processStatus(msg) {
     trackDescription = trackDetails.artist ? "${trackDetails.title} by ${trackDetails.artist}" : trackDetails.title
   }
   updateTrackDescription(trackDescription)
+}
+
+private processTime(msg) {
+  state.trackTime = msg.result?.get("_time")
 }
 
 private updatePower(onOff) {
@@ -260,6 +272,7 @@ def playUri(uri) {
 
 //--- resume/restore methods
 private previewAndGetDelay(uri, duration, volume=null) {
+  executeCommand(["time", "?"])
   executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
   if (volume != null) {
     state.previousVolume = device.currentValue("level");
@@ -268,21 +281,29 @@ private previewAndGetDelay(uri, duration, volume=null) {
   return 2 + duration as int
 }
 
-def resume() {
-  log "resume()"
-  def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
-  executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
+private restoreVolumeAndRefresh() {
   if (state.previousVolume) {
     setVolume(state.previousVolume)
   }
   refresh()
 }
 
+def resume() {
+  log "resume()"
+  def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
+  executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
+  if (state.trackTime) {
+    executeCommand(["time", state.trackTime])
+	state.remove("trackTime")
+  }
+  restoreVolumeAndRefresh()
+}
+
 def restore() {
   log "restore()"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "preview", "cmd:stop"])
-  refresh()
+  restoreVolumeAndRefresh()
 }
 
 def playTrackAndResume(uri, duration, volume=null) {
