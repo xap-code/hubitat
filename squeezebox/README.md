@@ -62,7 +62,7 @@ B: Create Custom Commands to call sync(...) and unsync() methods
 1. Open Rule Machine app (you may need to install it via "Load New App" if you haven't already)
 2. Click "Create Custom Commands"
 3. Select "Music player" as capability for test device
-4. Select one of you Squeezebox player devices (this is only used to get available commands and test the function)
+4. Select one of your Squeezebox player devices (this is only used to get available commands and test the function)
 5. Click "New custom command..."
 6. Select "sync" as custom command
 7. Click "Parameters"
