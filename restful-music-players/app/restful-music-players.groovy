@@ -1,5 +1,8 @@
 /**
  *  RESTful Music Players
+ *
+ *  Copyright 2017 Ben Deitch
+ *
  */
 definition(
   name: "RESTful Music Players",
@@ -94,6 +97,12 @@ mappings {
       POST: "playerCommand"
     ]
   }
+  // path to capture multiple player names to synchronize together
+  path("/synchronise/:playerNames") {
+    action: [
+      POST: "synchronisePlayers"
+    ]
+  }
   path("/link") {
     action: [
       GET: "link"
@@ -108,6 +117,10 @@ def listPlayers() {
     resp << [name: it.displayName]
   }
   return resp
+}
+
+private getParam(param) {
+  param?.replace("%20", " ")?.trim()
 }
 
 // Simple fuzzy matching algorithm (far from perfect but seems to work quite well with Google Home voice recog.):
@@ -125,9 +138,11 @@ def fuzzyMatch(deviceName, playerName) {
   int matches = deviceParts.collect({
     devicePart -> playerParts.collect({
       playerPart ->
-        if (devicePart.contains(playerPart)) {
+        if (devicePart.trim().equalsIgnoreCase(playerPart.trim())) {
+          3
+        } else if (devicePart.contains(playerPart.trim())) {
           2
-        } else if (playerPart.contains(devicePart)) {
+        } else if (playerPart.contains(devicePart.trim())) {
           1
         } else {
           0
@@ -165,9 +180,9 @@ def findPlayer(playerName) {
 def playerCommand() {
 
   // extract variables from REST URI
-  def playerName = params.playerName?.trim()
-  def command = params.command?.trim()
-  def value = params.value?.trim()
+  def playerName = getParam(params.playerName)
+  def command = getParam(params.command)
+  def value = getParam(params.value)
     
   log.debug "Command received: \"${command}\", playerName: \"${playerName}\", value: ${value}"
   
@@ -210,6 +225,9 @@ def playerCommand() {
       case "favorite":
         player.playFavorite(value)
         break
+      case "unsynchronise-all":
+        player.unsyncAll()
+        break
       default:
         log.debug "command not found: \"${command}\""
     }
@@ -217,5 +235,28 @@ def playerCommand() {
     log.debug "player not found: \"${playerName}\""
   }
     
+  render contentType: "text/plain", data: "OK"
+}
+
+def synchronisePlayers() {
+  
+  // extract variables from REST URI
+  def playerNames = getParam(params.playerNames)
+    
+  def splitPlayerNames = playerNames.split("and")
+
+  def players = splitPlayerNames
+    .collect { findPlayer(it.trim()) }
+    .findAll { it != null }
+    
+  if (players.size() > 1) {
+      def master = players.head()
+      def slaves = players.tail().collect({ it.name }).join(",")
+      
+      log.debug "Synchronising ${master.name} > ${slaves}"
+      
+      master.sync(slaves)
+  }
+   
   render contentType: "text/plain", data: "OK"
 }
