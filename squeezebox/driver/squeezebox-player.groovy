@@ -67,13 +67,14 @@ private processStatus(msg) {
   updateVolume(msg.result?.get("mixer volume"))
   updatePlayPause(msg.result?.get("mode"))
   updateSyncGroup(msg.result?.get("sync_master"), msg.result?.get("sync_slaves"))
+    
   def trackDetails = msg.result?.playlist_loop?.get(0)
   updateTrackUri(trackDetails?.url)
-  String track
+  String trackDescription
   if (trackDetails) {
-    track = trackDetails.artist ? "${trackDetails.title} by ${trackDetails.artist}" : trackDetails.title
+    trackDescription = trackDetails.artist ? "${trackDetails.title} by ${trackDetails.artist}" : trackDetails.title
   }
-  updateTrackDescription(track)
+  updateTrackDescription(trackDescription)
 }
 
 private updatePower(onOff) {
@@ -150,6 +151,7 @@ def on() {
   executeCommand(["power", 1])
   refresh()
 }
+
 def off() {
   executeCommand(["power", 0])
   refresh()  
@@ -159,14 +161,17 @@ def off() {
 private setVolume(volume) {
   executeCommand(["mixer", "volume", volume])
 }
+
 def setLevel(level) {
   setVolume(level)
   refresh()
 }
+
 def mute() {
   executeCommand(["mixer", "muting", 1])
   refresh() 
 }
+
 def unmute() {
   executeCommand(["mixer", "muting", 0])
   refresh() 
@@ -177,39 +182,49 @@ def play() {
   executeCommand(["play"])
   refresh()
 }
+
 def pause() {
   executeCommand(["pause"])
   refresh() 
 }
+
 def stop() {
   executeCommand(["stop"])
   refresh() 
 }
+
 def nextTrack() {
   executeCommand(["playlist", "jump", "+1"])
   refresh()  
 }
+
 def previousTrack() {
   executeCommand(["playlist", "jump", "-1"])
   refresh() 
 }
+
 def setTrack(trackToSet) {
   executeCommand(["playlist", "stop", trackToSet])
   stop()  
 }
+
 def resumeTrack(trackToResume) {
   playUri(trackToResume)
 }
+
 def restoreTrack(trackToRestore) {
   playUri(trackToRestore)
 }
+
 def playTrack(trackToPlay) {
   playUri(trackToPlay)
 }
+
 def playTrackAtVolume(uri, volume) {
   setVolume(volume)
   playUri(uri)
 }
+
 def playUri(uri) {
   executeCommand(["playlist", "play", uri])
   refresh()  
@@ -224,6 +239,7 @@ private previewAndGetDelay(uri, duration, volume=null) {
   }
   return 2 + duration as int
 }
+
 def resume() {
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
@@ -232,6 +248,7 @@ def resume() {
   }
   refresh()
 }
+
 def restore() {
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
   executeCommand(["playlist", "preview", "cmd:stop"])
@@ -242,6 +259,7 @@ def playTrackAndResume(uri, duration, volume=null) {
   def delay = previewAndGetDelay(uri, duration, volume)
   runIn(delay, resume)
 }
+
 def playTrackAndRestore(uri, duration, volume=null) {
   def delay = previewAndGetDelay(uri, duration, volume)
   runIn(delay, restore)
@@ -275,18 +293,21 @@ def playText(text) {
     playUri(tts.uri)
   }
 }
+
 def playTextAndRestore(text, volume=null) {
   def tts = getTts(text)
   if (tts) {
     playTrackAndRestore(tts.uri, tts.duration, volume)
   }
 }
+
 def playTextAndResume(text, volume=null) {
   def tts = getTts(text)
   if (tts) {
     playTrackAndResume(tts.uri, tts.duration, volume)
   }
 }
+
 def speak(text) {
   playText(text)
 }
@@ -317,10 +338,10 @@ def unsyncAll() {
     getParent().unsyncAll(syncGroupMacs)
   }
 }
+
 /*******************
  * Utility Methods *
  *******************/
- 
 private executeCommand(params) {
   //log.debug "Squeezebox Send: ${params}"
     
