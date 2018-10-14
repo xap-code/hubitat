@@ -4,6 +4,12 @@
  *  Copyright 2017 Ben Deitch
  *
  */
+
+/* ChangeLog:
+ * 13/10/2018 - Added support for password protection
+ * 14/10/2018 - Added support for player synchronization
+ * 14/10/2018 - Added transferPlaylist
+ */
 definition(
   name: "Squeezebox Connect",
   namespace: "xap",
@@ -281,6 +287,20 @@ def getChildDeviceMac(name) {
 
 def unsyncAll(playerMacs) {
   playerMacs?.each { getChildDevice(it)?.unsync() }
+}
+
+def transferPlaylist(destination, tempPlaylist, time) {
+
+  def destinationMac = getChildDeviceMac(destination)
+  def destinationPlayer = getChildDevice(destinationMac)
+    
+  if (destinationPlayer) {
+    destinationPlayer.resumeTempPlaylistAtTime(tempPlaylist, time)
+    destinationPlayer.refresh()
+    true
+  } else {
+    false
+  }
 }
 
 /*******************

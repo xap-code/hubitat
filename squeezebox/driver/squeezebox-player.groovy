@@ -9,6 +9,7 @@
  * 13/10/2018 - Added support for password protection
  * 14/10/2018 - Added support for player synchronization
  * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
+ * 14/10/2018 - Added transferPlaylist
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -37,6 +38,7 @@ metadata {
     command "playTrackAtVolume", ["STRING","NUMBER"]
     command "speak", ["STRING"]
     command "sync", ["STRING"]
+    command "transferPlaylist", ["STRING"]
     command "unsync"
     command "unsyncAll"
   }
@@ -271,31 +273,53 @@ def playUri(uri) {
 }
 
 //--- resume/restore methods
-private previewAndGetDelay(uri, duration, volume=null) {
+private captureTime() {
   executeCommand(["time", "?"])
-  executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
+}
+
+private clearCapturedTime() {
+  state.remove("trackTime")
+}
+
+private captureAndChangeVolume(volume) {
   if (volume != null) {
     state.previousVolume = device.currentValue("level");
     setVolume(volume)
   }
+}
+
+private clearCapturedVolume() {
+  state.remove("previousVolume")
+}
+
+private previewAndGetDelay(uri, duration, volume=null) {
+  captureTime()
+  executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
+  captureAndChangeVolume(volume)    
   return 2 + duration as int
 }
 
 private restoreVolumeAndRefresh() {
   if (state.previousVolume) {
     setVolume(state.previousVolume)
+    clearCapturedVolume()
   }
   refresh()
+}
+
+// this method is also used by the server when sending a playlist to this player
+def resumeTempPlaylistAtTime(tempPlaylist, time=null) {
+  executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
+  if (time) {
+    executeCommand(["time", time])
+  }
 }
 
 def resume() {
   log "resume()"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
-  executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
-  if (state.trackTime) {
-    executeCommand(["time", state.trackTime])
-	state.remove("trackTime")
-  }
+  resumeTempPlaylistAtTime(tempPlaylist, state.trackTime)
+  clearCapturedTime()
   restoreVolumeAndRefresh()
 }
 
@@ -399,6 +423,19 @@ def unsyncAll() {
   if (syncGroupMacs) {
     getParent().unsyncAll(syncGroupMacs)
   }
+}
+
+//--- Playlist
+def transferPlaylist(destination) {
+  log "transferPlaylist(\"${destination}\")"
+  def tempPlaylist = "tempplaylist_from_" + state.playerMAC.replace(":", "")
+  executeCommand(["playlist", "save", tempPlaylist])
+  captureTime()
+  if (getParent().transferPlaylist(destination, tempPlaylist, state.trackTime)) {
+    executeCommand(["playlist", "clear"])
+  }
+  clearCapturedTime()
+  refresh()
 }
 
 /*******************

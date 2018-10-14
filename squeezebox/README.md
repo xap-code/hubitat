@@ -45,6 +45,9 @@ unsync()
 unsyncAll()
 - If the player is in a sync group, calls unsync() on all members of the group, removing the sync group.
 
+transferPlaylist("{destination player}")
+- Transfers the current playlist from the player the command is called on to the destination player (specified by either name or MAC).
+
 Example: create a virtual switch to allow you to synchronise and unsynchronise your players
 -------------------------------------------------------------------------------------------
 
