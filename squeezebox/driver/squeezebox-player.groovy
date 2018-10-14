@@ -316,7 +316,7 @@ private getTts(text) {
   if (text) {
     textToSpeech(text)
   } else {
-    log.warning "No text provided for speak() method"
+    log.error "No text provided for speak() method"
   }
 }
 
