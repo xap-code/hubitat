@@ -277,6 +277,8 @@ private previewAndGetDelay(uri, duration, volume=null) {
   if (volume != null) {
     state.previousVolume = device.currentValue("level");
     setVolume(volume)
+  } else {
+    state.previousVolume = null
   }
   return 2 + duration as int
 }
