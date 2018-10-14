@@ -184,6 +184,9 @@ def getServerStatus56() { getServerStatus() }
 def getServerStatus58() { getServerStatus() }
 
 def processJsonMessage(msg) {
+
+  //log.debug "Squeezebox Connect Message [${msg.params[0]}]: ${msg}"
+
   def playerId = msg.params[0]
   if (playerId == "") {
     // if no playerId in message params then it must be a general server message
@@ -234,16 +237,34 @@ def updatePlayers() {
 
   // iterate over connected players to update their status
   state.connectedPlayers?.each {
-    
+      
     // look to see if we have a device for the player
     def player = getChildDevice(it.mac)
 
-    // if we have then, if it is switched on, get detailed status information to update it with; otherwise, just update its
-    // power state to save spamming the server with constant requests for updates for players that aren't even switched on
-    if (player && (it.power == "1" || player.updatePower(it.power))) {
-      executeCommand([it.mac, ["status", "-", 1, "tags:abclu"]])
+    // if we have then, if it is switched on (or its power status has changed), get detailed status information to update it with;
+    // otherwise, just update its power state to save spamming the server with constant requests for updates for players that aren't even switched on
+    if (player && (it.power == 1 || player.updatePower(it.power))) {
+      executeCommand([it.mac, ["status", "-", 1, "tags:abclsu"]])
     }
   }
+}
+
+/****************************
+ * Methods for Child Devices *
+ ****************************/
+
+def getChildDeviceName(mac) {
+  getChildDevice(mac)?.name
+}
+
+def getChildDeviceMac(name) {
+  def trimmedName = name.trim()
+  def result = getChildDevices().findResult {it.name == trimmedName ? it.deviceNetworkId : null} 
+  result ? result : getChildDevice(trimmedName)?.deviceNetworkId
+}
+
+def unsyncAll(playerMacs) {
+  playerMacs?.each { getChildDevice(it)?.unsync() }
 }
 
 /*******************

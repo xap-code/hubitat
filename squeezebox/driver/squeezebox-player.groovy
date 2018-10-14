@@ -15,9 +15,10 @@ metadata {
     capability "Speech Synthesis"
     capability "Switch"
 
-    attribute "serverHostAddress", "string"
-    attribute "playerMAC", "string"
-
+    attribute "serverHostAddress", "STRING"
+    attribute "playerMAC", "STRING"
+    attribute "syncGroup", "STRING"
+      
     command "fav1"
     command "fav2"
     command "fav3"
@@ -26,11 +27,14 @@ metadata {
     command "fav6"
     command "playFavorite", ["NUMBER"]
     command "playTextAndRestore", ["STRING","NUMBER"]
-    command "playTextAndResume", ["STRING","NUMBER"]
+	command "playTextAndResume", ["STRING","NUMBER"]
     command "playTrackAndRestore", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAndResume", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAtVolume", ["STRING","NUMBER"]
     command "speak", ["STRING"]
+    command "sync", ["STRING"]
+    command "unsync"
+    command "unsyncAll"
   }
 }
 
@@ -47,7 +51,7 @@ def configure(serverHostAddress, playerMAC, auth) {
 
 def processJsonMessage(msg) {
 
-  log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
+  //log.debug "Squeezebox Player Message [${device.name}]: ${msg}"
 
   def command = msg.params[1][0]
 
@@ -62,7 +66,7 @@ private processStatus(msg) {
   updatePower(msg.result?.get("power"))
   updateVolume(msg.result?.get("mixer volume"))
   updatePlayPause(msg.result?.get("mode"))
-    
+  updateSyncGroup(msg.result?.get("sync_master"), msg.result?.get("sync_slaves"))
   def trackDetails = msg.result?.playlist_loop?.get(0)
   updateTrackUri(trackDetails?.url)
   String track
@@ -78,8 +82,6 @@ private updatePower(onOff) {
   String onOffString = String.valueOf(onOff) == "1" ? "on" : "off"
 
   if (current != onOffString) {
-
-    //log.debug "Squeezebox Player [${device.name}]: updating power: ${current} -> ${onOffString}"
     sendEvent(name: "switch", value: onOffString, displayed: true)
     return true
  
@@ -121,12 +123,26 @@ private updateTrackDescription(trackDescription) {
   sendEvent(name: "trackDescription", value: trackDescription, displayed: true)
 }
 
+private updateSyncGroup(syncMaster, syncSlaves) {
+
+  def parent = getParent()
+
+  def syncGroup = syncMaster
+    ? "${syncMaster},${syncSlaves}"
+      .tokenize(",")
+      .collect { parent.getChildDeviceName(it) }
+    : null
+
+  state.syncGroup = syncGroup
+  sendEvent(name: "syncGroup", value: syncGroup, displayed: true)
+}
+
 /************
  * Commands *
  ************/
 
 def refresh() {
-  executeCommand(["status", "-", 1, "tags:abclu"]) 
+  executeCommand(["status", "-", 1, "tags:abclsu"]) 
 }
 
 //--- Power
@@ -275,6 +291,32 @@ def speak(text) {
   playText(text)
 }
 
+//--- Synchronization
+private getPlayerMacs(players) {
+  players?.collect { parent.getChildDeviceMac(it) }
+    .findAll { it != null }
+}
+
+def sync(slaves) {
+  def parent = getParent()
+  def slaveMacs = getPlayerMacs(slaves.tokenize(","))
+  if (slaveMacs) {
+    slaveMacs.each { executeCommand(["sync", it]) }
+    refresh()
+  }
+}
+
+def unsync() {
+  executeCommand(["sync", "-"])
+  refresh()
+}
+
+def unsyncAll() {
+  def syncGroupMacs = getPlayerMacs(state.syncGroup)
+  if (syncGroupMacs) {
+    getParent().unsyncAll(syncGroupMacs)
+  }
+}
 /*******************
  * Utility Methods *
  *******************/
