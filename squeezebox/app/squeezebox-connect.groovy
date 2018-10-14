@@ -286,10 +286,12 @@ def getChildDeviceMac(name) {
 }
 
 def unsyncAll(playerMacs) {
+  log.debug "unsyncAll(${playerMacs})"
   playerMacs?.each { getChildDevice(it)?.unsync() }
 }
 
 def transferPlaylist(destination, tempPlaylist, time) {
+  log.debug "transferPlaylist(\"${destination}\", \"${tempPlaylist}\", ${time})"
 
   def destinationMac = getChildDeviceMac(destination)
   def destinationPlayer = getChildDevice(destinationMac)

@@ -15,12 +15,12 @@ definition(
   iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@3x.png")
 
 preferences {
-    page(name: "Select Players", install: false, uninstall: true, nextPage: "viewURL") {
-  section {
-	input(name: "players", type: "capability.musicPlayer", title: "Select players to control", multiple: true)
-  }
-    }
-  page(name: "viewURL", install: false, uninstall: true)
+	page(name: "Select Players", install: false, uninstall: true, nextPage: "viewURL") {
+		section {
+			input(name: "players", type: "capability.musicPlayer", title: "Select players to control", multiple: true)
+		}
+	}
+	page(name: "viewURL", install: false, uninstall: true)
 }
 
 def viewURL() {
@@ -43,12 +43,11 @@ def updated() {
 	log.debug "Updated with settings: ${settings}"
 	unsubscribe()
 	unschedule()
-	
 	initialize()
 }
 
 def initialize() {
-
+  // nothing yet
 }
 
 def generateURL(path) {
@@ -101,6 +100,12 @@ mappings {
   path("/synchronise/:playerNames") {
     action: [
       POST: "synchronisePlayers"
+    ]
+  }
+  // path to capture multiple player names to transfer playlist between
+  path("/transfer/:playerNames") {
+    action: [
+      POST: "transferPlaylist"
     ]
   }
   path("/link") {
@@ -256,6 +261,29 @@ def synchronisePlayers() {
       log.debug "Synchronising ${master.name} > ${slaves}"
       
       master.sync(slaves)
+  }
+   
+  render contentType: "text/plain", data: "OK"
+}
+
+def transferPlaylist() {
+  // extract variables from REST URI
+  def playerNames = getParam(params.playerNames)
+    
+  def splitPlayerNames = playerNames.split("to")
+
+  def players = splitPlayerNames
+    .collect { findPlayer(it.trim()) }
+    .findAll { it != null }
+    
+  if (players.size() == 2) {
+      
+      def source = players[0]
+      def destination = players[1]
+      
+      log.debug "Transferring playlist from ${source} to ${destination}"
+      
+      source?.transferPlaylist(destination?.deviceNetworkId)
   }
    
   render contentType: "text/plain", data: "OK"

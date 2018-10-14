@@ -150,7 +150,7 @@ private updateSyncGroup(syncMaster, syncSlaves) {
 
   def parent = getParent()
 
-  def syncGroup = syncMaster
+  def syncGroup = syncMaster && syncSlaves
     ? "${syncMaster},${syncSlaves}"
       .tokenize(",")
       .collect { parent.getChildDeviceName(it) }
