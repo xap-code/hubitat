@@ -4,11 +4,13 @@ Installation
 ============
 
 A: Create App
+
 1. View app/squeezebox-connect.groovy in raw mode (just the source code text)
 2. In Hubitat click on "Apps Code" on the left and then "New App" on the top right.
 3. Copy and paste the app source code into the blank section on the Hubitat page and click Save.
 
-B: Create Drivers<br>
+B: Create Drivers
+
 (Steps 4-6 are optional, they are only required if you want to enable/disable player alarms via a player child switch)
 1. View driver/squeezebox-player.groovy in raw mode
 2. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
@@ -18,6 +20,7 @@ B: Create Drivers<br>
 6. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
 
 C: Install App
+
 1. In Hubitat click on "Apps" on the left and then "Load New App" on the top right.
 2. Scroll to the bottom of the list that pops up, under "User Apps" find Squeezebox Connect and click on it.
 3. Enter the IP Address of the machine running your Squeezebox Server (LMS) software (this needs to have a fixed IP address).
