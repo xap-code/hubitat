@@ -9,10 +9,10 @@ A: Create App
 3. Copy and paste the app source code into the blank section on the Hubitat page and click Save.
 
 B: Create Drivers
+(Steps 4-6 are optional, they are only required if you want to enable/disable player alarms via a player child switch)
 1. View driver/squeezebox-player.groovy in raw mode
 2. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
 3. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
-(Steps 4-6 are optional, they are only required if you want to enable/disable player alarms via a player child switch)
 4. View driver/squeezebox-player-child-switch.groovy in raw mode
 5. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
 6. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
