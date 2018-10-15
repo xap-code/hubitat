@@ -8,10 +8,14 @@ A: Create App
 2. In Hubitat click on "Apps Code" on the left and then "New App" on the top right.
 3. Copy and paste the app source code into the blank section on the Hubitat page and click Save.
 
-B: Create Driver
+B: Create Drivers
 1. View driver/squeezebox-player.groovy in raw mode
 2. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
 3. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
+(Steps 4-6 are optional, they are only required if you want to enable/disable player alarms via a player child switch)
+4. View driver/squeezebox-player-child-switch.groovy in raw mode
+5. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
+6. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
 
 C: Install App
 1. In Hubitat click on "Apps" on the left and then "Load New App" on the top right.
@@ -32,8 +36,8 @@ Debug Logging
 =============
 You can enable/disable debug logging in the Squeezebox Connect app preferences. If you have multiple players then they can generate quite a lot of log data so it is strongly recommended to deactivate the debug logging unless you need it to troubleshoot something for example.
 
-Extra Commands
-==============
+Extra Player Commands
+=====================
 This integration exposes some extra Player device commands specific to Squeezebox.
 
 sync("{players}")

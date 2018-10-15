@@ -9,6 +9,7 @@
  * 13/10/2018 - Added support for password protection
  * 14/10/2018 - Added support for player synchronization
  * 14/10/2018 - Added transferPlaylist
+ * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  */
 definition(
   name: "Squeezebox Connect",
@@ -41,10 +42,16 @@ preferences {
     }
     section("<h3>Other Settings</h3>") {
       paragraph("Enables/disables debug logging for the Squeezebox Connect app and all the Squeezebox Player child devices.")
-      input "debugLogging", "bool", title: "Enable debug logging?", defaultValue: false, required: false
+      input(name: "debugLogging", type: "bool", title: "Enable debug logging?", defaultValue: false, required: false)
     }
   }
-  page(name: "playersPage", title: "<h2>Select Squeezebox Players</h2>", install: true, uninstall: true)
+  page(name: "playersPage", title: "<h2>Select Squeezebox Players</h2>", nextPage: "playerOptionsPage", install: false, uninstall: false)
+  page(name: "playerOptionsPage", title: "<h2>Player Options</h2>", install: true, uninstall: false) {
+    section("<h3>Enable/Disable Alarms Switch</h3>") {
+      paragraph("Selected players will create a child switch device which can be used to enable/disable all alarms on that player.")
+      input(name: "createAlarmsSwitchPlayers", type: "enum", title: "Create Alarms Switch For Players", multiple: true, options: selectedPlayers)
+    }
+  }
 }
 
 def playersPage() {
@@ -145,7 +152,9 @@ def initializePlayers() {
       )
     }
     // always configure the player in case the server settings have changed
-    player.configure(serverHostAddress, it.mac, state.auth)
+    player.configure(serverHostAddress, it.mac, state.auth, createAlarmsSwitchPlayers.contains(it.name))
+    // refresh the player to initialise state
+    player.refresh()
   }
     // delete any child devices for players that are no longer selected
   unselected?.each {
@@ -266,7 +275,7 @@ def updatePlayers() {
     // if we have then, if it is switched on (or its power status has changed), get detailed status information to update it with;
     // otherwise, just update its power state to save spamming the server with constant requests for updates for players that aren't even switched on
     if (player && (it.power == 1 || player.updatePower(it.power))) {
-      executeCommand([it.mac, ["status", "-", 1, "tags:abclsu"]])
+      player.refresh()
     }
   }
 }

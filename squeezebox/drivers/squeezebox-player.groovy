@@ -10,6 +10,7 @@
  * 14/10/2018 - Added support for player synchronization
  * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
  * 14/10/2018 - Added transferPlaylist
+ * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -23,7 +24,7 @@ metadata {
     attribute "serverHostAddress", "STRING"
     attribute "playerMAC", "STRING"
     attribute "syncGroup", "STRING"
-      
+    
     command "fav1"
     command "fav2"
     command "fav3"
@@ -50,7 +51,25 @@ def log(message) {
   }
 }
 
-def configure(serverHostAddress, playerMAC, auth) {
+def getAlarmsSwitchDni() {
+  "${state.playerMAC}-alarms"
+}
+
+def configureAlarmsSwitch(createAlarmsSwitch) {
+    
+  def alarmsSwitchDni = getAlarmsSwitchDni()
+
+  if (createAlarmsSwitch) {
+    if (!getChildDevice(alarmsSwitchDni)) {
+        def alarmsSwitch = addChildDevice("Squeezebox Player Child Switch", alarmsSwitchDni)
+        alarmsSwitch.name = "${device.name} - All Alarms"
+    }
+  } else if (getChildDevice(alarmsSwitchDni)) {
+    deleteChildDevice(alarmsSwitchDni)
+  }
+}
+
+def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch=true) {
     
   state.serverHostAddress = serverHostAddress
   sendEvent(name: "serverHostAddress", value: state.serverHostAddress, displayed: false, isStateChange: true)
@@ -60,7 +79,9 @@ def configure(serverHostAddress, playerMAC, auth) {
     
   state.auth = auth
     
-  log "Configured with [serviceHostAddress: ${serverHostAddress}, playerMAC: ${playerMAC}, auth: ${auth}]"
+  configureAlarmsSwitch(createAlarmsSwitch)
+      
+  log "Configured with [serviceHostAddress: ${serverHostAddress}, playerMAC: ${playerMAC}, auth: ${auth}, createAlarmsSwitch: ${createAlarmsSwitch}]"
 }
 
 def processJsonMessage(msg) {
@@ -75,6 +96,9 @@ def processJsonMessage(msg) {
       break
     case "time":
       processTime(msg)
+      break
+    case "playerpref":
+      processPlayerPref(msg)
       break
   }
 }
@@ -97,6 +121,14 @@ private processStatus(msg) {
 
 private processTime(msg) {
   state.trackTime = msg.result?.get("_time")
+}
+
+private processPlayerPref(msg) {
+
+  if (msg.params[1][1] == "alarmsEnabled") {
+    def alarmsSwitch = getChildDevice(getAlarmsSwitchDni())
+    alarmsSwitch?.update(msg.result?.get("_p2") == "1")    
+  }
 }
 
 private updatePower(onOff) {
@@ -166,6 +198,9 @@ private updateSyncGroup(syncMaster, syncSlaves) {
 
 def refresh() {
   executeCommand(["status", "-", 1, "tags:abclsu"]) 
+  if (getChildDevice(getAlarmsSwitchDni())) {
+    executeCommand(["playerpref", "alarmsEnabled", "?"]) 
+  }
 }
 
 //--- Power
@@ -435,6 +470,17 @@ def transferPlaylist(destination) {
     executeCommand(["playlist", "clear"])
   }
   clearCapturedTime()
+  refresh()
+}
+
+//--- Alarms
+def disableAlarms() {
+  executeCommand(["alarm", "disableall"])
+  refresh()
+}
+
+def enableAlarms() {
+  executeCommand(["alarm", "enableall"])
   refresh()
 }
 
