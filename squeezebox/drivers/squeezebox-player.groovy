@@ -61,7 +61,7 @@ def configureAlarmsSwitch(createAlarmsSwitch) {
 
   if (createAlarmsSwitch) {
     if (!getChildDevice(alarmsSwitchDni)) {
-        def alarmsSwitch = addChildDevice("Squeezebox Player Child Switch", alarmsSwitchDni)
+        def alarmsSwitch = addChildDevice("Squeezebox Player Alarms Switch", alarmsSwitchDni)
         alarmsSwitch.name = "${device.name} - All Alarms"
     }
   } else if (getChildDevice(alarmsSwitchDni)) {
@@ -69,7 +69,7 @@ def configureAlarmsSwitch(createAlarmsSwitch) {
   }
 }
 
-def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch=true) {
+def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch) {
     
   state.serverHostAddress = serverHostAddress
   sendEvent(name: "serverHostAddress", value: state.serverHostAddress, displayed: false, isStateChange: true)

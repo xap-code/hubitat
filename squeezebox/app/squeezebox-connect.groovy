@@ -152,7 +152,7 @@ def initializePlayers() {
       )
     }
     // always configure the player in case the server settings have changed
-    player.configure(serverHostAddress, it.mac, state.auth, createAlarmsSwitchPlayers.contains(it.name))
+    player.configure(serverHostAddress, it.mac, state.auth, createAlarmsSwitchPlayers?.contains(it.name))
     // refresh the player to initialise state
     player.refresh()
   }

@@ -1,15 +1,15 @@
 /**
- *  Squeezebox Player Child Switch
+ *  Squeezebox Player Alarms Switch
  *
  *  Copyright 2017 Ben Deitch
  *
  */
 
 /* ChangeLog:
- * 15/10/2018 - First version
+ * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  */
 metadata {
-  definition (name: "Squeezebox Player Child Switch", namespace: "xap", author: "Ben Deitch") {
+  definition (name: "Squeezebox Player Alarms Switch", namespace: "xap", author: "Ben Deitch") {
     capability "Actuator"
     capability "Sensor"
     capability "Switch"

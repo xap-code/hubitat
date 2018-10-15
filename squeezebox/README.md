@@ -13,7 +13,7 @@ B: Create Drivers<br>
 1. View driver/squeezebox-player.groovy in raw mode
 2. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
 3. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
-4. View driver/squeezebox-player-child-switch.groovy in raw mode
+4. View driver/squeezebox-player-alarms-switch.groovy in raw mode
 5. In Hubitat click on "Drivers Code" on the left and then "New Driver" on the top right.
 6. Copy and paste the device source code into the blank section on the Hubitat page and click Save.
 
