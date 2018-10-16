@@ -21,28 +21,46 @@ metadata {
     capability "Speech Synthesis"
     capability "Switch"
 
-    attribute "serverHostAddress", "STRING"
     attribute "playerMAC", "STRING"
+    attribute "repeat", "ENUM", repeatModes
+    attribute "serverHostAddress", "STRING"
+    attribute "shuffle", "ENUM", shuffleModes
     attribute "syncGroup", "STRING"
     
+    command "clearPlaylist"
     command "fav1"
     command "fav2"
     command "fav3"
     command "fav4"
     command "fav5"
     command "fav6"
+    command "playAlbum", ["STRING"]
+    command "playArtist", ["STRING"]
     command "playFavorite", ["NUMBER"]
+    command "playSong", ["STRING"]
     command "playTextAndRestore", ["STRING","NUMBER"]
     command "playTextAndResume", ["STRING","NUMBER"]
     command "playTrackAndRestore", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAndResume", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAtVolume", ["STRING","NUMBER"]
+    command "repeat", [repeatModes]
+    command "shuffle", [shuffleModes]
     command "speak", ["STRING"]
     command "sync", ["STRING"]
     command "transferPlaylist", ["STRING"]
     command "unsync"
     command "unsyncAll"
   }
+}
+
+// define constants for repeat mode (order must match LMS modes)
+def getRepeatModes() {
+  ["off", "song", "playlist"]
+}
+
+// define constants for shuffle mode (order must match LMS modes)
+def getShuffleModes() {
+  ["off", "song", "album"]
 }
 
 def log(message) {
@@ -108,6 +126,8 @@ private processStatus(msg) {
   updatePower(msg.result?.get("power"))
   updateVolume(msg.result?.get("mixer volume"))
   updatePlayPause(msg.result?.get("mode"))
+  updateRepeat(msg.result?.get("playlist repeat"))
+  updateShuffle(msg.result?.get("playlist shuffle"))
   updateSyncGroup(msg.result?.get("sync_master"), msg.result?.get("sync_slaves"))
     
   def trackDetails = msg.result?.playlist_loop?.get(0)
@@ -168,6 +188,14 @@ private updatePlayPause(playpause) {
   }
 
   sendEvent(name: "status", value: status, displayed: true)
+}
+
+private updateRepeat(repeat) {
+  sendEvent(name: "repeat", value: repeatModes[Integer.valueOf(repeat)], displayed: true)
+}
+
+private updateShuffle(shuffle) {
+  sendEvent(name: "shuffle", value: shuffleModes[Integer.valueOf(shuffle)], displayed: true)
 }
 
 private updateTrackUri(trackUri) {
@@ -380,7 +408,8 @@ def playTrackAndRestore(uri, duration, volume=null) {
 //--- Favorites
 def playFavorite(index) {
   log "playFavorite(${index})"
-  executeCommand(["favorites", "playlist", "play", "item_id:${index - 1}"])
+  int intIndex = Integer.valueOf(index)
+  executeCommand(["favorites", "playlist", "play", "item_id:${intIndex - 1}"])
   refresh() 
 }
 
@@ -473,20 +502,63 @@ def transferPlaylist(destination) {
   refresh()
 }
 
+def clearPlaylist() {
+  log "clearPlaylist()"
+  executeCommand(["playlist", "clear"])
+  refresh()
+}
 //--- Alarms
 def disableAlarms() {
+  log "disableAlarms()"
   executeCommand(["alarm", "disableall"])
   refresh()
 }
 
 def enableAlarms() {
+  log "enableAlarms()"
   executeCommand(["alarm", "enableall"])
   refresh()
+}
+
+//--- Search to Play
+def playAlbum(search) {
+  log "playAlbum(\"${search}\")"
+  executeCommand(["playlist", "loadtracks", "album.titlesearch=${search}"])
+}
+
+def playArtist(search) {
+  log "playAlbum(\"${search}\")"
+  executeCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
+}
+
+def playSong(search) {
+  log "playSong(\"${search}\")"
+  executeCommand(["playlist", "loadtracks", "track.titlesearch=${search}"])
+}
+
+//--- Repeat and Shuffle
+def repeat(repeat=null) {
+  log "repeat(\"${repeat}\")"
+  def mode = tryConvertToIndex(repeat, repeatModes)
+  executeCommand(["playlist", "repeat", mode])
+}
+
+def shuffle(shuffle=null) {
+  log "shuffle(\"${shuffle}\")"
+  def mode = tryConvertToIndex(shuffle, shuffleModes)
+  executeCommand(["playlist", "shuffle", mode])
 }
 
 /*******************
  * Utility Methods *
  *******************/
+
+private tryConvertToIndex(value, lowerCaseValues) {
+  def lowerCaseValue = String.valueOf(value).toLowerCase()
+  def index = lowerCaseValues.indexOf(lowerCaseValue)
+  index < 0 ? value : index
+}
+
 private executeCommand(params) {
   log "Squeezebox Player Send [${device.name}]: ${params}"
     

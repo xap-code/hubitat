@@ -52,6 +52,27 @@ unsyncAll()
 transferPlaylist("{destination player}")
 - Transfers the current playlist from the player the command is called on to the destination player (specified by either name or MAC).
 
+clearPlaylist()
+- Clears the current playlist from the player
+
+playAlbum(search)
+- Searches for albums based on the provided search text and plays them on the player
+
+playArtist(search)
+- Searches for artists based on the provided search text and plays all their tracks on the player. This works well used in conjuction with shuffle("song")
+
+playSong(search)
+- Searches for songs based on the provided search text and plays them on the player
+
+repeat(repeat)
+- Sets the player repeat mode if parameter is specified, otherwise toggles the repeat mode if no parameter is specified.
+	valid values are: "off", "song", "playlist"
+	
+shuffle(shuffle)
+- Sets the player shuffle mode if parameter is specified, otherwise toggles the shuffle mode if no parameter is specified.
+	valid values are: "off", "song", "album"
+	
+	
 Example: create a virtual switch to allow you to synchronise and unsynchronise your players
 -------------------------------------------------------------------------------------------
 

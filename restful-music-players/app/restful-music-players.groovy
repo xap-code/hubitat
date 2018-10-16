@@ -108,6 +108,24 @@ mappings {
       POST: "transferPlaylist"
     ]
   }
+  // path to capture search and player name to play album
+    path("/album/:searchAndPlayer") {
+      action: [
+        POST: "searchToPlayAlbum"
+      ]
+    }
+  // path to capture search and player name to play artist
+    path("/artist/:searchAndPlayer") {
+      action: [
+        POST: "searchToPlayArtist"
+      ]
+    }
+  // path to capture search and player name to play album
+    path("/song/:searchAndPlayer") {
+      action: [
+        POST: "searchToPlaySong"
+      ]
+    }
   path("/link") {
     action: [
       GET: "link"
@@ -205,6 +223,9 @@ def playerCommand() {
         break
       case "stop":
         player.stop()
+        player.shuffle("off")
+        player.repeat("off")
+        player.clearPlaylist()
         break
       case "mute":
         player.mute()
@@ -233,6 +254,8 @@ def playerCommand() {
       case "unsynchronise-all":
         player.unsyncAll()
         break
+      case "reset":
+        
       default:
         log.debug "command not found: \"${command}\""
     }
@@ -287,4 +310,51 @@ def transferPlaylist() {
   }
    
   render contentType: "text/plain", data: "OK"
+}
+
+private searchToPlay(playerMethod) {
+    def searchAndPlayer = getParam(params.searchAndPlayer)
+    log.debug searchAndPlayer
+    def splitIndex = searchAndPlayer.lastIndexOf(" on ")
+    if (splitIndex < 0) {
+      return
+    }
+    
+    def search = searchAndPlayer.substring(0, splitIndex)
+    def playerName = searchAndPlayer.substring(splitIndex)
+    
+    def player = findPlayer(playerName)
+    
+    switch (playerMethod) {
+      case "album":
+        if (player) {
+          player.shuffle("off")
+          player.playAlbum(search)
+        }
+        break
+      case "artist":
+        if (player) {
+          player.playArtist(search)
+          player.shuffle("song")
+        }
+        break
+      case "song":
+        if (player) {
+          player.shuffle("off")
+          player.playSong(search)
+        }
+        break
+    }
+}
+
+def searchToPlayAlbum() {
+  searchToPlay("album")    
+}
+
+def searchToPlayArtist() {
+  searchToPlay("artist")    
+}
+
+def searchToPlaySong() {
+  searchToPlay("song")    
 }
