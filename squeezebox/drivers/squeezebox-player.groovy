@@ -525,7 +525,7 @@ def enableAlarms() {
 //--- Search to Play
 private checkSuccess(searchType) {
   if (state.status != 'playing') {
-      playText("Sorry, your search didn't return anything. Try saying the ${searchType} name a different way.")
+      playTextAndRestore("Sorry, your search didn't return anything. Try saying the ${searchType} name a different way.")
   }
 }
 
