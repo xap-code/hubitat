@@ -13,6 +13,7 @@
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  * 16/10/2018 - Add methods to play albums, artists and songs by name
  * 16/10/2018 - Add methods to control repeat and shuffle mode
+ * 16/10/2018 - Speak error message if search by name fails
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -174,22 +175,21 @@ private updateVolume(volume) {
 
 private updatePlayPause(playpause) {
 
-  String status
   switch (playpause) {
     case "play":
-      status = "playing"
+      state.status = "playing"
       break
     case "pause":
-      status = "paused"
+      state.status = "paused"
       break
     case "stop":
-      status = "stopped"
+      state.status = "stopped"
       break
     default:
-      status = playpause
+      state.status = playpause
   }
 
-  sendEvent(name: "status", value: status, displayed: true)
+  sendEvent(name: "status", value: state.status, displayed: true)
 }
 
 private updateRepeat(repeat) {
@@ -523,19 +523,31 @@ def enableAlarms() {
 }
 
 //--- Search to Play
+private checkSuccess(searchType) {
+  if (state.status != 'playing') {
+      playText("Sorry, your search didn't return anything. Try saying the ${searchType} name a different way.")
+  }
+}
+
 def playAlbum(search) {
   log "playAlbum(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "album.titlesearch=${search}"])
+  refresh()
+  checkSuccess("album")
 }
 
 def playArtist(search) {
   log "playAlbum(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
+  refresh()
+  checkSuccess("artist")
 }
 
 def playSong(search) {
   log "playSong(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "track.titlesearch=${search}"])
+  refresh()
+  checkSuccess("song")
 }
 
 //--- Repeat and Shuffle
@@ -543,12 +555,14 @@ def repeat(repeat=null) {
   log "repeat(\"${repeat}\")"
   def mode = tryConvertToIndex(repeat, repeatModes)
   executeCommand(["playlist", "repeat", mode])
+  refresh()
 }
 
 def shuffle(shuffle=null) {
   log "shuffle(\"${shuffle}\")"
   def mode = tryConvertToIndex(shuffle, shuffleModes)
   executeCommand(["playlist", "shuffle", mode])
+  refresh()
 }
 
 /*******************
