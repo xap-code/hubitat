@@ -11,6 +11,8 @@
  * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
  * 14/10/2018 - Added transferPlaylist
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
+ * 16/10/2018 - Add methods to play albums, artists and songs by name
+ * 16/10/2018 - Add methods to control repeat and shuffle mode
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
