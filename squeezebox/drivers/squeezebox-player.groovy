@@ -529,25 +529,37 @@ private checkSuccess(searchType) {
   }
 }
 
+def checkAlbumSuccess() {
+  checkSuccess("album")
+}
+
 def playAlbum(search) {
   log "playAlbum(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "album.titlesearch=${search}"])
   refresh()
-  checkSuccess("album")
+  runIn(3, checkAlbumSuccess)
+}
+
+def checkArtistSuccess() {
+  checkSuccess("artist")
 }
 
 def playArtist(search) {
   log "playAlbum(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
   refresh()
-  checkSuccess("artist")
+  runIn(3, checkArtistSuccess)
+}
+
+def checkSongSuccess() {
+  checkSuccess("song")
 }
 
 def playSong(search) {
   log "playSong(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "track.titlesearch=${search}"])
   refresh()
-  checkSuccess("song")
+  runIn(3, checkSongSuccess)
 }
 
 //--- Repeat and Shuffle
