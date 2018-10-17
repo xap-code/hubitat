@@ -170,7 +170,7 @@ def fuzzyMatch(deviceName, playerName) {
         } else {
           0
         }
-      }).sum()
+      }).max()
     }).sum()
 
   return matches
@@ -196,7 +196,7 @@ def findPlayer(playerName) {
     }
   }
   
-  log.debug("Player selected: ${player}, matches: ${matches}")
+  log.debug("Player selected: ${player}, input:\"${playerName}\",  matches: ${matches}")
   return player
 }
 
@@ -321,7 +321,7 @@ private searchToPlay(playerMethod) {
     }
     
     def search = searchAndPlayer.substring(0, splitIndex)
-    def playerName = searchAndPlayer.substring(splitIndex)
+    def playerName = searchAndPlayer.substring(splitIndex + " on ".length())
     
     def player = findPlayer(playerName)
     
