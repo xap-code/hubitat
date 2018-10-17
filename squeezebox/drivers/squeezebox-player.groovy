@@ -14,6 +14,7 @@
  * 16/10/2018 - Add methods to play albums, artists and songs by name
  * 16/10/2018 - Add methods to control repeat and shuffle mode
  * 16/10/2018 - Speak error message if search by name fails
+ * 17/10/2018 - Add method to speak artist's albums
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -49,6 +50,7 @@ metadata {
     command "repeat", [repeatModes]
     command "shuffle", [shuffleModes]
     command "speak", ["STRING"]
+    command "speakArtistAlbums", ["STRING"]
     command "sync", ["STRING"]
     command "transferPlaylist", ["STRING"]
     command "unsync"
@@ -361,7 +363,7 @@ private previewAndGetDelay(uri, duration, volume=null) {
   captureTime()
   executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
   captureAndChangeVolume(volume)    
-  return 2 + duration as int
+  return 1 + duration as int
 }
 
 private restoreVolumeAndRefresh() {
@@ -425,7 +427,11 @@ def fav6() { playFavorite(6) }
 //--- Speech
 private getTts(text) {
   if (text) {
-    textToSpeech(text)
+    // add a break to the end of the generated file, prevents text being repeated if LMS decides to loop?!?
+    def tts = textToSpeech("${text}<break time='1s'/>")
+    // reduce the duration to account for the added break
+    tts.duration--
+    tts
   } else {
     log.error "No text provided for speak() method"
   }
@@ -522,7 +528,7 @@ def enableAlarms() {
   refresh()
 }
 
-//--- Search to Play
+//--- Library Methods
 private checkSuccess(searchType) {
   if (state.status != 'playing') {
       playTextAndRestore("Sorry, your search didn't return anything. Try saying the ${searchType} name a different way.")
@@ -562,6 +568,50 @@ def playSong(search) {
   runIn(3, checkSongSuccess)
 }
 
+def speakArtistAlbums(artist) {
+  executeQuery(["search", 0, 2, "term:${artist}"], this.&getArtistForListAlbums)
+}
+
+private getArtistForListAlbums(response) {
+    
+    def artists = response?.data?.result?.contributors_loop
+    
+    switch (artists?.size()) {
+        case null:
+        case 0:
+          playTextAndResume("Sorry, I couldn't find any matching artists. Try saying the artist name a different way.")
+          break
+        case 1:
+          def artist = artists.first()
+          def artistName = artist.contributor
+          def artistId = artist.contributor_id
+          executeQuery(["albums", 0, -1, "artist_id:${artistId}"], { resp -> listAlbums(artistName, resp) })
+          break
+        default:
+          playTextAndResume("I found multiple matching artists. Try saying the artist name a different way.")
+          break
+    }
+}
+
+private listAlbums(artist, response) {
+  
+    def albums = response?.data?.result?.albums_loop?.collect { it.album }
+    
+    switch (albums?.size()) {
+        case null:
+        case 0:
+          playTextAndResume("Sorry, I couldn't find any albums for ${artist}.")
+          break
+        case 1:
+          playTextAndResume("I found one album for ${artist}: ${albums.first()}")
+         break
+        default:
+          def lastAlbum = albums.pop() 
+          def albumList = "${albums.toSorted().join(", ")} and ${lastAlbum}"
+          playTextAndResume("I found ${albums.size()} albums for ${artist}: ${albumList}.")
+    }
+}
+
 //--- Repeat and Shuffle
 def repeat(repeat=null) {
   log "repeat(\"${repeat}\")"
@@ -588,34 +638,44 @@ private tryConvertToIndex(value, lowerCaseValues) {
 }
 
 private executeCommand(params) {
-  log "Squeezebox Player Send [${device.name}]: ${params}"
     
-  def jsonBody = buildJsonRequest(params)
-   
-  def postParams = [
-    uri: "http://${state.serverHostAddress}",
-    path: "jsonrpc.js",
-    body: jsonBody.toString()
-  ]
-    
-  if (state.auth) {
-    postParams.headers = ["Authorization": "Basic ${state.auth}"]
-  }
-     
-  httpPost(postParams) { resp ->
+  def json = buildPlayerRequest(params)
+
+  sendJsonRequest(json, { resp ->
     processJsonMessage(resp.data)
-  }
+  })
 }
- 
-private buildJsonRequest(params) {
- 
+
+private executeQuery(params, callback) {
+    
+  def json = buildPlayerRequest(params)
+    
+  sendJsonRequest(json, callback);
+}
+
+private buildPlayerRequest(params) {
+    
   def request = [
     id: 1,
     method: "slim.request",
     params: [state.playerMAC, params]
   ]
     
-  def json = new groovy.json.JsonBuilder(request)
+  new groovy.json.JsonBuilder(request)
+}
 
-  json
+private sendJsonRequest(json, callback) {
+  log "Squeezebox Player Send [${device.name}]: ${json}"
+    
+  def postParams = [
+    uri: "http://${state.serverHostAddress}",
+    path: "jsonrpc.js",
+    body: json.toString()
+  ]
+    
+  if (state.auth) {
+    postParams.headers = ["Authorization": "Basic ${state.auth}"]
+  }
+     
+  httpPost(postParams, callback) 
 }
