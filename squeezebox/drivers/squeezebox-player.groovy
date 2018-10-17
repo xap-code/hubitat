@@ -14,7 +14,6 @@
  * 16/10/2018 - Add methods to play albums, artists and songs by name
  * 16/10/2018 - Add methods to control repeat and shuffle mode
  * 16/10/2018 - Speak error message if search by name fails
- * 17/10/2018 - Add method to speak artist's albums
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -428,10 +427,14 @@ def fav6() { playFavorite(6) }
 private getTts(text) {
   if (text) {
     // add a break to the end of the generated file, prevents text being repeated if LMS decides to loop?!?
-    def tts = textToSpeech("${text}<break time='1s'/>")
+    def result = textToSpeech("${text}<break time='1s'/>")
     // reduce the duration to account for the added break
-    tts.duration--
-    tts
+    if (result) {
+      result.duration--
+      result
+    } else {
+      log.error "textToSpeech returned null"
+    }
   } else {
     log.error "No text provided for speak() method"
   }
@@ -569,46 +572,56 @@ def playSong(search) {
 }
 
 def speakArtistAlbums(artist) {
-  executeQuery(["search", 0, 2, "term:${artist}"], this.&getArtistForListAlbums)
+  log "speakArtistAlbums(\"${artist}\")"
+  executeQuery(["search", 0, 2, "term:${artist}"], { resp -> getArtistForListAlbums(artist, resp) })
 }
 
-private getArtistForListAlbums(response) {
+private getArtistForListAlbums(artistSearch, response) {
     
     def artists = response?.data?.result?.contributors_loop
     
     switch (artists?.size()) {
         case null:
         case 0:
-          playTextAndResume("Sorry, I couldn't find any matching artists. Try saying the artist name a different way.")
+          playTextAndRestore("Sorry, I couldn't find any artists matching ${artistSearch}. Try saying the artist name a different way.")
           break
         case 1:
-          def artist = artists.first()
-          def artistName = artist.contributor
-          def artistId = artist.contributor_id
-          executeQuery(["albums", 0, -1, "artist_id:${artistId}"], { resp -> listAlbums(artistName, resp) })
+          listArtistAlbums(artists.first())
           break
         default:
-          playTextAndResume("I found multiple matching artists. Try saying the artist name a different way.")
+          def exactArtist = artists.find { it.contributor.equalsIgnoreCase(artistSearch.trim()) }
+          if (exactArtist) {
+            listArtistAlbums(exactArtist)
+          } else {
+            def artistNames = artists.collect({ it.contributor }).join(", ")
+            playTextAndRestore("I found multiple matching artists: ${artistNames}. Try saying the artist name a different way.")
+          }
           break
-    }
+ tore}
 }
 
-private listAlbums(artist, response) {
+private listArtistAlbums(artist) {
+   def artistName = artist.contributor
+   def artistId = artist.contributor_id
+   executeQuery(["albums", 0, -1, "artist_id:${artistId}"], { resp -> listAlbums(artistName, resp) })
+}
+
+private listAlbums(artistName, response) {
   
     def albums = response?.data?.result?.albums_loop?.collect { it.album }
     
     switch (albums?.size()) {
         case null:
         case 0:
-          playTextAndResume("Sorry, I couldn't find any albums for ${artist}.")
+          playTextAndRestore("Sorry, I couldn't find any albums for ${artistName}.")
           break
         case 1:
-          playTextAndResume("I found one album for ${artist}: ${albums.first()}")
+          playTextAndRestore("I found one album for ${artistName}: ${albums.first()}")
          break
         default:
           def lastAlbum = albums.pop() 
           def albumList = "${albums.toSorted().join(", ")} and ${lastAlbum}"
-          playTextAndResume("I found ${albums.size()} albums for ${artist}: ${albumList}.")
+          playTextAndRestore("I found ${albums.size()} albums for ${artistName}: ${albumList}.")
     }
 }
 

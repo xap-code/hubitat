@@ -358,7 +358,7 @@ private searchTo(playerMethod) {
         break
       case "speakArtistAlbums":
         def data = [playerId: player.deviceNetworkId, search: search]
-        runIn(3, delayedSpeakArtistAlbums, [data: data])
+        runIn(2, delayedSpeakArtistAlbums, [data: data])
     }
 }
 
