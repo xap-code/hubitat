@@ -14,6 +14,7 @@
  * 16/10/2018 - Add methods to play albums, artists and songs by name
  * 16/10/2018 - Add methods to control repeat and shuffle mode
  * 16/10/2018 - Speak error message if search by name fails
+ * 17/10/2018 - Add method to speak the names of an artist's albums
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
