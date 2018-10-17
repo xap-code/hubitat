@@ -109,23 +109,30 @@ mappings {
     ]
   }
   // path to capture search and player name to play album
-    path("/album/:searchAndPlayer") {
-      action: [
-        POST: "searchToPlayAlbum"
-      ]
-    }
+  path("/album/:searchAndPlayer") {
+    action: [
+      POST: "searchToPlayAlbum"
+    ]
+  }
   // path to capture search and player name to play artist
-    path("/artist/:searchAndPlayer") {
-      action: [
-        POST: "searchToPlayArtist"
-      ]
-    }
+  path("/artist/:searchAndPlayer") {
+    action: [
+      POST: "searchToPlayArtist"
+    ]
+  }
   // path to capture search and player name to play album
-    path("/song/:searchAndPlayer") {
-      action: [
-        POST: "searchToPlaySong"
-      ]
-    }
+  path("/song/:searchAndPlayer") {
+    action: [
+      POST: "searchToPlaySong"
+    ]
+  }
+  // path to capture search and player name to list an artist's albums
+  path("/artistalbums/:searchAndPlayer") {
+    action: [
+      POST: "searchToSpeakArtistAlbums"
+    ]
+  }
+  // path used to get oauth token during setup
   path("/link") {
     action: [
       GET: "link"
@@ -312,7 +319,12 @@ def transferPlaylist() {
   render contentType: "text/plain", data: "OK"
 }
 
-private searchToPlay(playerMethod) {
+def delayedSpeakArtistAlbums(data) {
+  def player = players.find { it.deviceNetworkId == data.playerId }
+  player?.speakArtistAlbums(data.search)
+}
+
+private searchTo(playerMethod) {
     def searchAndPlayer = getParam(params.searchAndPlayer)
     log.debug searchAndPlayer
     def splitIndex = searchAndPlayer.lastIndexOf(" on ")
@@ -326,35 +338,42 @@ private searchToPlay(playerMethod) {
     def player = findPlayer(playerName)
     
     switch (playerMethod) {
-      case "album":
+      case "playAlbum":
         if (player) {
           player.shuffle("off")
           player.playAlbum(search)
         }
         break
-      case "artist":
+      case "playArtist":
         if (player) {
           player.playArtist(search)
           player.shuffle("song")
         }
         break
-      case "song":
+      case "playSong":
         if (player) {
           player.shuffle("off")
           player.playSong(search)
         }
         break
+      case "speakArtistAlbums":
+        def data = [playerId: player.deviceNetworkId, search: search]
+        runIn(3, delayedSpeakArtistAlbums, [data: data])
     }
 }
 
 def searchToPlayAlbum() {
-  searchToPlay("album")    
+  searchTo("playAlbum")    
 }
 
 def searchToPlayArtist() {
-  searchToPlay("artist")    
+  searchTo("playArtist")    
 }
 
 def searchToPlaySong() {
-  searchToPlay("song")    
+  searchTo("playSong")    
+}
+
+def searchToSpeakArtistAlbums() {
+  searchTo("speakArtistAlbums")
 }
