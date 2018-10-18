@@ -16,6 +16,7 @@
  * 16/10/2018 - Speak error message if search by name fails
  * 17/10/2018 - Add method to speak the names of an artist's albums
  * 18/10/2018 - Adjust spoken error messages to be more useful and less specific to voice control
+ * 18/10/2018 - Replace '&' in TTS input with ' and '
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -428,11 +429,12 @@ def fav6() { playFavorite(6) }
 //--- Speech
 private getTts(text) {
   if (text) {
+    text = text.replace("&", "and")
     // add a break to the end of the generated file, prevents text being repeated if LMS decides to loop?!?
-    def result = textToSpeech("${text}<break time='1s'/>")
+    def result = textToSpeech("${text}<break time='2s'/>")
     // reduce the duration to account for the added break
     if (result) {
-      result.duration--
+      result.duration -= 2
       result
     } else {
       log.error "textToSpeech returned null"
