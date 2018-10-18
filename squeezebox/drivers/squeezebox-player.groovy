@@ -14,6 +14,7 @@
  * 16/10/2018 - Add methods to play albums, artists and songs by name
  * 16/10/2018 - Add methods to control repeat and shuffle mode
  * 16/10/2018 - Speak error message if search by name fails
+ * 17/10/2018 - Add method to speak an artist's albums
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -362,7 +363,7 @@ private previewAndGetDelay(uri, duration, volume=null) {
   captureTime()
   executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
   captureAndChangeVolume(volume)    
-  return 1 + duration as int
+  return 2 + duration as int
 }
 
 private restoreVolumeAndRefresh() {
@@ -597,7 +598,7 @@ private getArtistForListAlbums(artistSearch, response) {
             playTextAndRestore("I found multiple matching artists: ${artistNames}. Try saying the artist name a different way.")
           }
           break
- tore}
+    }
 }
 
 private listArtistAlbums(artist) {
