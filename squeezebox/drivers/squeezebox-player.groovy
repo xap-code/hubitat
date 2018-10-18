@@ -15,6 +15,7 @@
  * 16/10/2018 - Add methods to control repeat and shuffle mode
  * 16/10/2018 - Speak error message if search by name fails
  * 17/10/2018 - Add method to speak the names of an artist's albums
+ * 18/10/2018 - Adjust spoken error messages to be more useful and less specific to voice control
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -535,7 +536,7 @@ def enableAlarms() {
 //--- Library Methods
 private checkSuccess(searchType) {
   if (state.status != 'playing') {
-      playTextAndRestore("Sorry, your search didn't return anything. Try saying the ${searchType} name a different way.")
+      playTextAndRestore("Sorry, your search didn't return anything. Please try providing less of the ${searchType} name.")
   }
 }
 
@@ -584,7 +585,7 @@ private getArtistForListAlbums(artistSearch, response) {
     switch (artists?.size()) {
         case null:
         case 0:
-          playTextAndRestore("Sorry, I couldn't find any artists matching ${artistSearch}. Try saying the artist name a different way.")
+          playTextAndRestore("Sorry, I couldn't find any artists matching ${artistSearch}. Please try providing less of the artist name.")
           break
         case 1:
           listArtistAlbums(artists.first())
@@ -595,7 +596,7 @@ private getArtistForListAlbums(artistSearch, response) {
             listArtistAlbums(exactArtist)
           } else {
             def artistNames = artists.collect({ it.contributor }).join(", ")
-            playTextAndRestore("I found multiple matching artists: ${artistNames}. Try saying the artist name a different way.")
+            playTextAndRestore("I found multiple matching artists: ${artistNames}. Please try providing more of the artist name.")
           }
           break
     }
