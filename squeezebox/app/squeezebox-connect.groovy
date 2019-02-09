@@ -19,6 +19,7 @@
  * 14/10/2018 - Added support for player synchronization
  * 14/10/2018 - Added transferPlaylist
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
+ * 09/02/2019 - Changed server polling to use Async HTTP call
  */
 definition(
   name: "Squeezebox Connect",
@@ -335,19 +336,19 @@ def executeCommand(params) {
    
   def postParams = [
     uri: "http://${serverIP}:${serverPort}",
-    path: "jsonrpc.js",
-    body: jsonBody.toString()
+		path: "jsonrpc.js",
+		requestContentType: 'application/json',
+		contentType: 'application/json',
+		body: jsonBody.toString()
   ]
     
   if (state.auth) {
     postParams.headers = ["Authorization": "Basic ${state.auth}"]
   }
      
-  httpPost(postParams) { resp ->
-    processJsonMessage(resp.data)
-  }
+  asynchttpPost "receiveHttpResponse", postParams
 }
-  
+
 // build the JSON content for the Squeezebox Server request
 def buildJsonRequest(params) {
  
@@ -360,4 +361,14 @@ def buildJsonRequest(params) {
   def json = new groovy.json.JsonBuilder(request)
 
   json
+}
+
+// receive the Squeezebox Server response and extract the JSON
+def receiveHttpResponse(response, data) {
+	def json = response.json
+	if (json) {
+		processJsonMessage(json)
+	} else {
+		log.warn "Received response that didn't contain any JSON data: ${response.data}"
+	}
 }
