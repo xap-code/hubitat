@@ -1,6 +1,9 @@
 /**
  *  Squeezebox Player
  *
+ *  Git Hub Raw Link - Use for Import into Hubitat
+ *  https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy
+ *
  *  Copyright 2017 Ben Deitch
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
