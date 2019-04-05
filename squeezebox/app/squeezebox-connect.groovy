@@ -20,6 +20,7 @@
  * 14/10/2018 - Added transferPlaylist
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  * 09/02/2019 - Changed server polling to use Async HTTP call
+ * 05/04/2019 - Add basic sync mechanism to prevent multiple server status requests building up
  */
 definition(
   name: "Squeezebox Connect",
@@ -269,9 +270,16 @@ def processServerStatus(msg) {
   updatePlayers()
 }
 
-def getServerStatus() {
-  // instructs Squeezebox Server to give high level status info on all connected players
-  executeCommand(["", ["serverstatus", 0, 99]])
+private getServerStatus() {
+
+	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
+	if (state.busy) {
+		log.warn("Skipping getServerStatus() as previous command has not yet completed")
+	} else {
+		state.busy = true;
+		// instructs Squeezebox Server to give high level status info on all connected players
+	  executeCommand(["", ["serverstatus", 0, 99]])
+	}
 }
 
 def updatePlayers() {
@@ -331,22 +339,29 @@ def transferPlaylist(destination, tempPlaylist, time) {
 def executeCommand(params) {
 
   log "Squeezebox Connect Send: ${params}"
-    
-  def jsonBody = buildJsonRequest(params)
-   
-  def postParams = [
-    uri: "http://${serverIP}:${serverPort}",
-		path: "jsonrpc.js",
-		requestContentType: 'application/json',
-		contentType: 'application/json',
-		body: jsonBody.toString()
-  ]
-    
-  if (state.auth) {
-    postParams.headers = ["Authorization": "Basic ${state.auth}"]
-  }
-     
-  asynchttpPost "receiveHttpResponse", postParams
+
+	try {
+		
+		def jsonBody = buildJsonRequest(params)
+
+		def postParams = [
+			uri: "http://${serverIP}:${serverPort}",
+			path: "jsonrpc.js",
+			requestContentType: 'application/json',
+			contentType: 'application/json',
+			body: jsonBody.toString()
+		]
+
+		if (state.auth) {
+			postParams.headers = ["Authorization": "Basic ${state.auth}"]
+		}
+
+		asynchttpPost "receiveHttpResponse", postParams
+		
+	} catch (Exception ex) {
+		state.remove("busy")
+		throw ex
+	}
 }
 
 // build the JSON content for the Squeezebox Server request
@@ -365,10 +380,23 @@ def buildJsonRequest(params) {
 
 // receive the Squeezebox Server response and extract the JSON
 def receiveHttpResponse(response, data) {
-	def json = response.json
-	if (json) {
-		processJsonMessage(json)
-	} else {
-		log.warn "Received response that didn't contain any JSON data: ${response.data}"
+
+	try {
+
+		if (response.status == 200) {
+
+			def json = response.json
+			if (json) {
+				processJsonMessage(json)
+			} else {
+				log.warn "Received response that didn't contain any JSON"
+			}
+
+		} else {
+			log.warn "Received error response [${response.status}] : ${response.errorMessage}"
+		}
+
+	} finally {
+		state.remove("busy")
 	}
 }
