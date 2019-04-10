@@ -21,6 +21,7 @@
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  * 09/02/2019 - Changed server polling to use Async HTTP call
  * 05/04/2019 - Add basic sync mechanism to prevent multiple server status requests building up
+ * 10/04/2009 - Change sync mechanism to warning if server requests are overlapping
  */
 definition(
   name: "Squeezebox Connect",
@@ -274,12 +275,12 @@ private getServerStatus() {
 
 	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
 	if (state.busy) {
-		log.warn("Skipping getServerStatus() as previous command has not yet completed")
-	} else {
-		state.busy = true;
-		// instructs Squeezebox Server to give high level status info on all connected players
-	  executeCommand(["", ["serverstatus", 0, 99]])
+		log.warn("Overlapping getServerStatus() requests, check network connectivity between HE Hub and LMS Server or consider increasing refresh interval.")
 	}
+	
+	state.busy = true;
+	// instructs Squeezebox Server to give high level status info on all connected players
+	executeCommand(["", ["serverstatus", 0, 99]])
 }
 
 def updatePlayers() {
@@ -340,28 +341,21 @@ def executeCommand(params) {
 
   log "Squeezebox Connect Send: ${params}"
 
-	try {
-		
-		def jsonBody = buildJsonRequest(params)
+	def jsonBody = buildJsonRequest(params)
 
-		def postParams = [
-			uri: "http://${serverIP}:${serverPort}",
-			path: "jsonrpc.js",
-			requestContentType: 'application/json',
-			contentType: 'application/json',
-			body: jsonBody.toString()
-		]
+	def postParams = [
+		uri: "http://${serverIP}:${serverPort}",
+		path: "jsonrpc.js",
+		requestContentType: 'application/json',
+		contentType: 'application/json',
+		body: jsonBody.toString()
+	]
 
-		if (state.auth) {
-			postParams.headers = ["Authorization": "Basic ${state.auth}"]
-		}
-
-		asynchttpPost "receiveHttpResponse", postParams
-		
-	} catch (Exception ex) {
-		state.remove("busy")
-		throw ex
+	if (state.auth) {
+		postParams.headers = ["Authorization": "Basic ${state.auth}"]
 	}
+
+	asynchttpPost "receiveHttpResponse", postParams
 }
 
 // build the JSON content for the Squeezebox Server request
