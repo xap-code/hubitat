@@ -3,15 +3,6 @@
  *
  *  Copyright 2017 Ben Deitch
  *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
- *
  */
 
 /* ChangeLog:
@@ -26,6 +17,9 @@
  * 17/10/2018 - Add method to speak the names of an artist's albums
  * 18/10/2018 - Adjust spoken error messages to be more useful and less specific to voice control
  * 18/10/2018 - Replace '&' in TTS input with ' and '
+ * 03/06/2019 - Resume playing track (instead of restore) after speaking
+ * 03/06/2019 - Add speakCurrentTrack() command
+ * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -51,7 +45,7 @@ metadata {
     command "fav6"
     command "playAlbum", ["STRING"]
     command "playArtist", ["STRING"]
-    command "playFavorite", ["NUMBER"]
+    command "playFavorite", ["INTEGER"]
     command "playSong", ["STRING"]
     command "playTextAndRestore", ["STRING","NUMBER"]
     command "playTextAndResume", ["STRING","NUMBER"]
@@ -62,6 +56,7 @@ metadata {
     command "shuffle", [shuffleModes]
     command "speak", ["STRING"]
     command "speakArtistAlbums", ["STRING"]
+    command "speakCurrentTrack"
     command "sync", ["STRING"]
     command "transferPlaylist", ["STRING"]
     command "unsync"
@@ -218,6 +213,7 @@ private updateTrackUri(trackUri) {
 }
 
 private updateTrackDescription(trackDescription) {
+  state.trackDescription = trackDescription
   sendEvent(name: "trackDescription", value: trackDescription, displayed: true)
 }
 
@@ -589,6 +585,27 @@ def speakArtistAlbums(artist) {
   executeQuery(["search", 0, 2, "term:${artist}"], { resp -> getArtistForListAlbums(artist, resp) })
 }
 
+private announce(text) {
+  if (state.status == "playing") {
+    playTextAndResume(text)
+  } else {
+    playTextAndRestore(text)
+  }
+}
+
+def speakCurrentTrack() {
+  log "speakCurrentTrack()"
+  if (state.trackDescription) {
+    if (state.status == "playing") {
+      playTextAndResume("The track currently playing is ${state.trackDescription}")
+    } else {
+      playTextAndRestore("The last track played was ${state.trackDescription}")
+    }
+  } else {
+    announce("There is no track.")
+  }
+}
+
 private getArtistForListAlbums(artistSearch, response) {
     
     def artists = response?.data?.result?.contributors_loop
@@ -596,7 +613,7 @@ private getArtistForListAlbums(artistSearch, response) {
     switch (artists?.size()) {
         case null:
         case 0:
-          playTextAndRestore("Sorry, I couldn't find any artists matching ${artistSearch}. Please try providing less of the artist name.")
+          announce("Sorry, I couldn't find any artists matching ${artistSearch}. Please try providing less of the artist name.")
           break
         case 1:
           listArtistAlbums(artists.first())
@@ -607,7 +624,7 @@ private getArtistForListAlbums(artistSearch, response) {
             listArtistAlbums(exactArtist)
           } else {
             def artistNames = artists.collect({ it.contributor }).join(", ")
-            playTextAndRestore("I found multiple matching artists: ${artistNames}. Please try providing more of the artist name.")
+            announce("I found multiple matching artists: ${artistNames}. Please try providing more of the artist name.")
           }
           break
     }
@@ -626,15 +643,15 @@ private listAlbums(artistName, response) {
     switch (albums?.size()) {
         case null:
         case 0:
-          playTextAndRestore("Sorry, I couldn't find any albums for ${artistName}.")
+          announce("Sorry, I couldn't find any albums for ${artistName}.")
           break
         case 1:
-          playTextAndRestore("I found one album for ${artistName}: ${albums.first()}")
+          announce("I found one album for ${artistName}: ${albums.first()}")
          break
         default:
           def lastAlbum = albums.pop() 
           def albumList = "${albums.toSorted().join(", ")} and ${lastAlbum}"
-          playTextAndRestore("I found ${albums.size()} albums for ${artistName}: ${albumList}.")
+          announce("I found ${albums.size()} albums for ${artistName}: ${albumList}.")
     }
 }
 
