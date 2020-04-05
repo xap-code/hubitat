@@ -20,10 +20,13 @@
  * 03/06/2019 - Resume playing track (instead of restore) after speaking
  * 03/06/2019 - Add speakCurrentTrack() command
  * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
+ * 05/04/2020 - Only resume track after playAndResume if one was actually playing
+ * 05/04/2020 - Support Audio Notification capability
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
     capability "Actuator"
+    capability "Audio Notification"
     capability "MusicPlayer"
     capability "Refresh"
     capability "Sensor"
@@ -47,14 +50,9 @@ metadata {
     command "playArtist", ["STRING"]
     command "playFavorite", ["INTEGER"]
     command "playSong", ["STRING"]
-    command "playTextAndRestore", ["STRING","NUMBER"]
-    command "playTextAndResume", ["STRING","NUMBER"]
-    command "playTrackAndRestore", ["STRING", "NUMBER", "NUMBER"]
-    command "playTrackAndResume", ["STRING", "NUMBER", "NUMBER"]
     command "playTrackAtVolume", ["STRING","NUMBER"]
     command "repeat", [repeatModes]
     command "shuffle", [shuffleModes]
-    command "speak", ["STRING"]
     command "speakArtistAlbums", ["STRING"]
     command "speakCurrentTrack"
     command "sync", ["STRING"]
@@ -406,8 +404,9 @@ def restore() {
 
 def playTrackAndResume(uri, duration, volume=null) {
   log "playTrackAndResume(\"${uri}\", ${duration}, ${volume})"
+  def wasPlaying = (state.status == 'playing')
   def delay = previewAndGetDelay(uri, duration, volume)
-  runIn(delay, resume)
+  if (wasPlaying) runIn(delay, resume)
 }
 
 def playTrackAndRestore(uri, duration, volume=null) {
