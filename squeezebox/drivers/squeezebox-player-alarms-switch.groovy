@@ -19,6 +19,7 @@
 
 /* ChangeLog:
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
+ * 13/04/2020 - Include git link
  */
 metadata {
   definition (name: "Squeezebox Player Alarms Switch", namespace: "xap", author: "Ben Deitch") {
