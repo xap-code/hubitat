@@ -278,13 +278,14 @@ private getServerStatus() {
 
 	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
 	if (state.busy) {
-		log.warn("Overlapping getServerStatus() requests, check network connectivity between HE Hub and LMS Server or consider increasing refresh interval.")
-		return
+		log.warn("Overlapping getServerStatus() requests, skipping this request. Check network connectivity between HE Hub and LMS Server or consider increasing refresh interval.")
+		// set busy to false to allow the next request to be attempted in case the previous async http request never invoked the response handler
+		state.busy = false;
+	} else {
+		state.busy = true;
+		// instructs Squeezebox Server to give high level status info on all connected players
+		executeCommand(["", ["serverstatus", 0, 99]])
 	}
-	
-	state.busy = true;
-	// instructs Squeezebox Server to give high level status info on all connected players
-	executeCommand(["", ["serverstatus", 0, 99]])
 }
 
 def updatePlayers() {
