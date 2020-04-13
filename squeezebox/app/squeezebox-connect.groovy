@@ -276,6 +276,7 @@ private getServerStatus() {
 	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
 	if (state.busy) {
 		log.warn("Overlapping getServerStatus() requests, check network connectivity between HE Hub and LMS Server or consider increasing refresh interval.")
+		return
 	}
 	
 	state.busy = true;
