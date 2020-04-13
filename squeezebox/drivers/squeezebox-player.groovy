@@ -1,6 +1,9 @@
 /**
  *  Squeezebox Player
  *
+ *  Git Hub Raw Link - Use for Import into Hubitat
+ *  https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy
+ *
  *  Copyright 2017 Ben Deitch
  *
  */
@@ -21,6 +24,7 @@
  * 03/06/2019 - Add speakCurrentTrack() command
  * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
  * 05/04/2020 - Support Audio Notification capability
+ * 13/04/2020 - merge PR to include git hub link in header
  * 13/04/2020 - Use async http method for player commands
  */
 metadata {
