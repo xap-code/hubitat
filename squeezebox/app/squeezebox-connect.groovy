@@ -187,7 +187,7 @@ def initializePlayers() {
 }
 
 def scheduleServerStatus(seconds) {
-    schedule("${seconds} * * * * ?", "getServerStatus${seconds}" )
+  schedule("${seconds} * * * * ?", "getServerStatus${seconds}" )
 }
 
 def scheduleServerStatus() {
@@ -197,6 +197,8 @@ def scheduleServerStatus() {
       scheduleServerStatus(i)
     }
   }
+  // remove busy indicator in case rescheduling occurred whilst waiting for response
+  state.remove("busy")
 }
 
 // have to create distinct methods otherwise successive calls
