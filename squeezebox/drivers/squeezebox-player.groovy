@@ -25,6 +25,7 @@
  * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
  * 05/04/2020 - Only resume track after playAndResume if one was actually playing
  * 05/04/2020 - Support Audio Notification capability
+ * 13/04/2020 - merge PR to include git hub link in header
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
