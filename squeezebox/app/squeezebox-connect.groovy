@@ -24,7 +24,9 @@
  * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  * 09/02/2019 - Changed server polling to use Async HTTP call
  * 05/04/2019 - Add basic sync mechanism to prevent multiple server status requests building up
- * 10/04/2009 - Change sync mechanism to warning if server requests are overlapping
+ * 10/04/2019 - Change sync mechanism to warning if server requests are overlapping
+ * 13/04/2020 - Adjust busy state logic
+ * 13/04/2020 - merge PR to include git hub link in header
  */
 definition(
   name: "Squeezebox Connect",
