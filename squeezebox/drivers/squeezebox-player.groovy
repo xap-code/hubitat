@@ -20,8 +20,8 @@
  * 03/06/2019 - Resume playing track (instead of restore) after speaking
  * 03/06/2019 - Add speakCurrentTrack() command
  * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
- * 05/04/2020 - Only resume track after playAndResume if one was actually playing
  * 05/04/2020 - Support Audio Notification capability
+ * 13/04/2020 - Use async http method for player commands
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -679,22 +679,6 @@ private tryConvertToIndex(value, lowerCaseValues) {
   index < 0 ? value : index
 }
 
-private executeCommand(params) {
-    
-  def json = buildPlayerRequest(params)
-
-  sendJsonRequest(json, { resp ->
-    processJsonMessage(resp.data)
-  })
-}
-
-private executeQuery(params, callback) {
-    
-  def json = buildPlayerRequest(params)
-    
-  sendJsonRequest(json, callback);
-}
-
 private buildPlayerRequest(params) {
     
   def request = [
@@ -706,18 +690,57 @@ private buildPlayerRequest(params) {
   new groovy.json.JsonBuilder(request)
 }
 
-private sendJsonRequest(json, callback) {
-  log "Squeezebox Player Send [${device.name}]: ${json}"
-    
-  def postParams = [
+private buildParams(json) {
+
+  def params = [
     uri: "http://${state.serverHostAddress}",
-    path: "jsonrpc.js",
-    body: json.toString()
-  ]
-    
-  if (state.auth) {
-    postParams.headers = ["Authorization": "Basic ${state.auth}"]
-  }
+		path: "jsonrpc.js",
+		requestContentType: 'application/json',
+		contentType: 'application/json',
+		body: json.toString()
+	]
+  
+	if (state.auth) {
+		params.headers = ["Authorization": "Basic ${state.auth}"]
+	}
+  
+  params
+}
+
+private executeQuery(params, callback) {
+  
+  def json = buildPlayerRequest(params)
+  
+  log "Squeezebox Player Send Query [${device.name}]: ${json}"
+
+  def postParams = buildParams(json)
      
-  httpPost(postParams, callback) 
+  httpPost postParams, callback
+}
+
+private executeCommand(params) {
+
+  log "Squeezebox Player Send Command: ${params}"
+
+  def json = buildPlayerRequest(params)
+
+  def postParams = buildParams(json)
+
+  asynchttpPost "receiveCommandResponse", postParams
+}
+
+def receiveCommandResponse(response, data) {
+
+  if (response.status == 200) {
+
+    def json = response.json
+    if (json) {
+      processJsonMessage(json)
+    } else {
+      log.warn "Received response that didn't contain any JSON"
+    }
+
+  } else {
+    log.warn "Received error response [${response.status}] : ${response.errorMessage}"
+  }
 }

@@ -1,6 +1,9 @@
 /**
  *  Squeezebox Connect
  *
+ *  Git Hub Raw Link - Use for Import into Hubitat
+ *  https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy
+ *
  *  Copyright 2017 Ben Deitch
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -22,6 +25,7 @@
  * 09/02/2019 - Changed server polling to use Async HTTP call
  * 05/04/2019 - Add basic sync mechanism to prevent multiple server status requests building up
  * 10/04/2009 - Change sync mechanism to warning if server requests are overlapping
+ * 13/04/2020 - Skip server status updates when busy
  */
 definition(
   name: "Squeezebox Connect",
@@ -275,12 +279,12 @@ private getServerStatus() {
 
 	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
 	if (state.busy) {
-		log.warn("Overlapping getServerStatus() requests, check network connectivity between HE Hub and LMS Server or consider increasing refresh interval.")
+		log.warn("Skipping request to refresh server status as still waiting on previous request. Hub network IO could be busy. If this occurs often then check network connectivity between HE Hub and LMS Server or consider increasing player refresh interval.")
+	} else {
+		state.busy = true;
+		// instructs Squeezebox Server to give high level status info on all connected players
+		executeCommand(["", ["serverstatus", 0, 99]])
 	}
-	
-	state.busy = true;
-	// instructs Squeezebox Server to give high level status info on all connected players
-	executeCommand(["", ["serverstatus", 0, 99]])
 }
 
 def updatePlayers() {
