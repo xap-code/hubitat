@@ -28,6 +28,7 @@
  * 13/04/2020 - Adjust busy state logic
  * 13/04/2020 - merge PR to include git hub link in header
  * 13/04/2020 - Skip server status updates when busy
+ * 20/04/2020 - Support player excludeFromPolling preference
  */
 definition(
   name: "Squeezebox Connect",
@@ -302,7 +303,11 @@ def updatePlayers() {
     // if we have then, if it is switched on (or its power status has changed), get detailed status information to update it with;
     // otherwise, just update its power state to save spamming the server with constant requests for updates for players that aren't even switched on
     if (player && (it.power == 1 || player.updatePower(it.power))) {
-      player.refresh()
+      if (player.isExcluded()) {
+        log "Not refreshing player excluded from polling: ${player.name}"
+      } else {
+        player.refresh()
+      }
     }
   }
 }

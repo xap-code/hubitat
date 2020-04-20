@@ -26,6 +26,8 @@
  * 05/04/2020 - Support Audio Notification capability
  * 13/04/2020 - merge PR to include git hub link in header
  * 13/04/2020 - Use async http method for player commands
+ * 20/04/2020 - Add excludeFromPolling preference
+ * 20/04/2020 - Add 500ms delay before post-command refresh
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -64,6 +66,10 @@ metadata {
     command "unsync"
     command "unsyncAll"
   }
+  
+  preferences {
+    input name: "excludeFromPolling", type: "bool", title: "Exclude from server polling (Player state is still refreshed after sending a command via Hubitat)", defaultValue: false
+  }
 }
 
 // define constants for repeat mode (order must match LMS modes)
@@ -74,6 +80,10 @@ def getRepeatModes() {
 // define constants for shuffle mode (order must match LMS modes)
 def getShuffleModes() {
   ["off", "song", "album"]
+}
+
+def isExcluded() {
+  excludeFromPolling
 }
 
 def log(message) {
@@ -237,24 +247,36 @@ private updateSyncGroup(syncMaster, syncSlaves) {
  * Commands *
  ************/
 
-def refresh() {
+private statusRefresh() {
   executeCommand(["status", "-", 1, "tags:abclsu"]) 
+}
+
+private alarmRefresh() {
   if (getChildDevice(getAlarmsSwitchDni())) {
     executeCommand(["playerpref", "alarmsEnabled", "?"]) 
   }
+}
+
+private commandRefresh() {
+  runInMillis 500, "statusRefresh"
+}
+
+def refresh() {
+  statusRefresh()
+  alarmRefresh()
 }
 
 //--- Power
 def on() {
   log "on()"
   executeCommand(["power", 1])
-  refresh()
+  commandRefresh()
 }
 
 def off() {
   log "off()"
   executeCommand(["power", 0])
-  refresh()  
+  commandRefresh()  
 }
 
 //--- Volume
@@ -265,55 +287,55 @@ private setVolume(volume) {
 def setLevel(level) {
   log "setLevel(${level})"
   setVolume(level)
-  refresh()
+  commandRefresh()
 }
 
 def mute() {
   log "mute()"
   executeCommand(["mixer", "muting", 1])
-  refresh() 
+  commandRefresh() 
 }
 
 def unmute() {
   log "unmute()"
   executeCommand(["mixer", "muting", 0])
-  refresh() 
+  commandRefresh() 
 }
 
 //--- Playback
 private executePlayAndRefresh(uri) {
   executeCommand(["playlist", "play", uri])
-  refresh()  
+  commandRefresh()  
 }
 
 def play() {
   log "play()"
   executeCommand(["play"])
-  refresh()
+  commandRefresh()
 }
 
 def pause() {
   log "pause()"
   executeCommand(["pause"])
-  refresh() 
+  commandRefresh() 
 }
 
 def stop() {
   log "stop()"
   executeCommand(["stop"])
-  refresh() 
+  commandRefresh() 
 }
 
 def nextTrack() {
   log "nextTrack()"
   executeCommand(["playlist", "jump", "+1"])
-  refresh()  
+  commandRefresh()  
 }
 
 def previousTrack() {
   log "previousTrack()"
   executeCommand(["playlist", "jump", "-1"])
-  refresh() 
+  commandRefresh() 
 }
 
 def setTrack(trackToSet) {
@@ -380,7 +402,7 @@ private restoreVolumeAndRefresh() {
     setVolume(state.previousVolume)
     clearCapturedVolume()
   }
-  refresh()
+  commandRefresh()
 }
 
 // this method is also used by the server when sending a playlist to this player
@@ -424,7 +446,7 @@ def playFavorite(index) {
   log "playFavorite(${index})"
   int intIndex = Integer.valueOf(index)
   executeCommand(["favorites", "playlist", "play", "item_id:${intIndex - 1}"])
-  refresh() 
+  commandRefresh()
 }
 
 def fav1() { playFavorite(1) }
@@ -500,7 +522,7 @@ def sync(slaves) {
 def unsync() {
   log "unsync()"
   executeCommand(["sync", "-"])
-  refresh()
+  commandRefresh()
 }
 
 def unsyncAll() {
@@ -522,14 +544,15 @@ def transferPlaylist(destination) {
     executeCommand(["playlist", "clear"])
   }
   clearCapturedTime()
-  refresh()
+  commandRefresh()
 }
 
 def clearPlaylist() {
   log "clearPlaylist()"
   executeCommand(["playlist", "clear"])
-  refresh()
+  commandRefresh()
 }
+
 //--- Alarms
 def disableAlarms() {
   log "disableAlarms()"
@@ -557,7 +580,7 @@ def checkAlbumSuccess() {
 def playAlbum(search) {
   log "playAlbum(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "album.titlesearch=${search}"])
-  refresh()
+  commandRefresh()
   runIn(3, checkAlbumSuccess)
 }
 
@@ -568,7 +591,7 @@ def checkArtistSuccess() {
 def playArtist(search) {
   log "playAlbum(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
-  refresh()
+  commandRefresh()
   runIn(3, checkArtistSuccess)
 }
 
@@ -579,7 +602,7 @@ def checkSongSuccess() {
 def playSong(search) {
   log "playSong(\"${search}\")"
   executeCommand(["playlist", "loadtracks", "track.titlesearch=${search}"])
-  refresh()
+  commandRefresh()
   runIn(3, checkSongSuccess)
 }
 
@@ -663,14 +686,14 @@ def repeat(repeat=null) {
   log "repeat(\"${repeat}\")"
   def mode = tryConvertToIndex(repeat, repeatModes)
   executeCommand(["playlist", "repeat", mode])
-  refresh()
+  commandRefresh()
 }
 
 def shuffle(shuffle=null) {
   log "shuffle(\"${shuffle}\")"
   def mode = tryConvertToIndex(shuffle, shuffleModes)
   executeCommand(["playlist", "shuffle", mode])
-  refresh()
+  commandRefresh()
 }
 
 /*******************
