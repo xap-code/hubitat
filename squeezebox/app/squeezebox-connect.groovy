@@ -200,7 +200,7 @@ def scheduleServerStatus() {
     }
   }
   // remove busy indicator in case rescheduling occurred whilst waiting for response
-  state.remove("busy")
+  unsetBusy()
 }
 
 // have to create distinct methods otherwise successive calls
@@ -281,6 +281,17 @@ def processServerStatus(msg) {
   updatePlayers()
 }
 
+private setBusy() {
+  
+  state.busy = true
+}
+
+private unsetBusy() {
+  
+  state.remove("busy")
+  state.remove("skipped")
+}
+
 private getServerStatus() {
 
 	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
@@ -289,11 +300,10 @@ private getServerStatus() {
     state.skipped = state.skipped ? state.skipped + 1 : 1
     if (state.skipped == 10) {
       log.warn("Skipped 10 requests. Resetting busy status to allow server status refresh on next attempt.")
-      state.remove("busy")
-      state.remove("skipped")
+      unsetBusy()
     }
 	} else {
-		state.busy = true;
+		setBusy()
 		// instructs Squeezebox Server to give high level status info on all connected players
 		executeCommand(["", ["serverstatus", 0, 99]])
 	}
@@ -411,6 +421,6 @@ def receiveHttpResponse(response, data) {
 		}
 
 	} finally {
-		state.remove("busy")
+		unsetBusy()
 	}
 }
