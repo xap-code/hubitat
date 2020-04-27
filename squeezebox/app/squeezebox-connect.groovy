@@ -29,6 +29,7 @@
  * 13/04/2020 - merge PR to include git hub link in header
  * 13/04/2020 - Skip server status updates when busy
  * 20/04/2020 - Support player excludeFromPolling preference
+ * 27/04/2020 - Reset busy status after skipping 10 server status updates
  */
 definition(
   name: "Squeezebox Connect",
@@ -284,7 +285,13 @@ private getServerStatus() {
 
 	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
 	if (state.busy) {
-		log.warn("Skipping request to refresh server status as still waiting on previous request. Hub network IO could be busy. If this occurs often then check network connectivity between HE Hub and LMS Server or consider increasing player refresh interval.")
+    log.warn("Skipping request to refresh server status as still waiting on previous request. Hub network IO could be busy. If this occurs often then check network connectivity between HE Hub and LMS Server or consider increasing player refresh interval.")
+    state.skipped = state.skipped ? state.skipped + 1 : 1
+    if (state.skipped == 10) {
+      log.warn("Skipped 10 requests. Resetting busy status to allow server status refresh on next attempt.")
+      state.remove("busy")
+      state.remove("skipped")
+    }
 	} else {
 		state.busy = true;
 		// instructs Squeezebox Server to give high level status info on all connected players
