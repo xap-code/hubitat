@@ -30,6 +30,7 @@
  * 13/04/2020 - Skip server status updates when busy
  * 20/04/2020 - Support player excludeFromPolling preference
  * 27/04/2020 - Reset busy status after skipping 10 server status updates
+ * 29/05/2020 - Don't poll details for disabled player devices
  */
 definition(
   name: "Squeezebox Connect",
@@ -322,6 +323,8 @@ def updatePlayers() {
     if (player && (it.power == 1 || player.updatePower(it.power))) {
       if (player.isExcluded()) {
         log "Not refreshing player excluded from polling: ${player.name}"
+      } else if (player.isDisabled()) {
+        log "Not refreshing disabled player device: ${player.name}"
       } else {
         player.refresh()
       }
