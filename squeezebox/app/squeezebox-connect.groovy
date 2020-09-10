@@ -31,6 +31,7 @@
  * 20/04/2020 - Support player excludeFromPolling preference
  * 27/04/2020 - Reset busy status after skipping 10 server status updates
  * 29/05/2020 - Don't poll details for disabled player devices
+ * 10/09/2020 - Replace ugly scheduling code with better solution
  */
 definition(
   name: "Squeezebox Connect",
@@ -189,53 +190,20 @@ def initializePlayers() {
   }
 }
 
-def scheduleServerStatus(seconds) {
-  schedule("${seconds} * * * * ?", "getServerStatus${seconds}" )
-}
-
 def scheduleServerStatus() {
   int refreshSecondsInt = refreshSeconds.toInteger()
-  for (int i = 0; i < 60; i++) {
-    if (i % refreshSecondsInt ==0) {
-      scheduleServerStatus(i)
-    }
+
+  if (refreshSecondsInt < 60) {
+    log "Scheduling refresh every ${refreshSecondsInt} seconds"
+    schedule("${Math.round(Math.random() * refreshSecondsInt)}/${refreshSecondsInt} * * ? * * *", "getServerStatus")
+  } else {
+    log "Scheduling refresh every minute"
+    runEvery1Minute("getServerStatus")
   }
+
   // remove busy indicator in case rescheduling occurred whilst waiting for response
   unsetBusy()
 }
-
-// have to create distinct methods otherwise successive calls
-// to schedule(...) just replace the previous call
-def getServerStatus0() { getServerStatus() }
-def getServerStatus2() { getServerStatus() }
-def getServerStatus4() { getServerStatus() }
-def getServerStatus6() { getServerStatus() }
-def getServerStatus8() { getServerStatus() }
-def getServerStatus10() { getServerStatus() }
-def getServerStatus12() { getServerStatus() }
-def getServerStatus14() { getServerStatus() }
-def getServerStatus16() { getServerStatus() }
-def getServerStatus18() { getServerStatus() }
-def getServerStatus20() { getServerStatus() }
-def getServerStatus22() { getServerStatus() }
-def getServerStatus24() { getServerStatus() }
-def getServerStatus26() { getServerStatus() }
-def getServerStatus28() { getServerStatus() }
-def getServerStatus30() { getServerStatus() }
-def getServerStatus32() { getServerStatus() }
-def getServerStatus34() { getServerStatus() }
-def getServerStatus36() { getServerStatus() }
-def getServerStatus38() { getServerStatus() }
-def getServerStatus40() { getServerStatus() }
-def getServerStatus42() { getServerStatus() }
-def getServerStatus44() { getServerStatus() }
-def getServerStatus46() { getServerStatus() }
-def getServerStatus48() { getServerStatus() }
-def getServerStatus50() { getServerStatus() }
-def getServerStatus52() { getServerStatus() }
-def getServerStatus54() { getServerStatus() }
-def getServerStatus56() { getServerStatus() }
-def getServerStatus58() { getServerStatus() }
 
 def processJsonMessage(msg) {
 
