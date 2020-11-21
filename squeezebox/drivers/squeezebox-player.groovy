@@ -28,12 +28,13 @@
  * 13/04/2020 - Use async http method for player commands
  * 20/04/2020 - Add excludeFromPolling preference
  * 20/04/2020 - Add 500ms delay before post-command refresh
+ * 21/11/2020 - Add optional child switch for power
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
     capability "Actuator"
     capability "Audio Notification"
-    capability "MusicPlayer"
+    capability "Music Player"
     capability "Refresh"
     capability "Sensor"
     capability "Speech Synthesis"
@@ -96,21 +97,11 @@ def getAlarmsSwitchDni() {
   "${state.playerMAC}-alarms"
 }
 
-def configureAlarmsSwitch(createAlarmsSwitch) {
-    
-  def alarmsSwitchDni = getAlarmsSwitchDni()
-
-  if (createAlarmsSwitch) {
-    if (!getChildDevice(alarmsSwitchDni)) {
-        def alarmsSwitch = addChildDevice("Squeezebox Player Alarms Switch", alarmsSwitchDni)
-        alarmsSwitch.name = "${device.name} - All Alarms"
-    }
-  } else if (getChildDevice(alarmsSwitchDni)) {
-    deleteChildDevice(alarmsSwitchDni)
-  }
+def getPowerSwitchDni() {
+  "${state.playerMAC}-power"
 }
 
-def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch) {
+def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch, createPowerSwitch) {
     
   state.serverHostAddress = serverHostAddress
   sendEvent(name: "serverHostAddress", value: state.serverHostAddress, displayed: false, isStateChange: true)
@@ -120,9 +111,10 @@ def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch) {
     
   state.auth = auth
     
-  configureAlarmsSwitch(createAlarmsSwitch)
+  configureChildSwitch(createAlarmsSwitch, alarmsSwitchDni, "All Alarms")
+  configureChildSwitch(createPowerSwitch, powerSwitchDni, "Power")
       
-  log "Configured with [serviceHostAddress: ${serverHostAddress}, playerMAC: ${playerMAC}, auth: ${auth}, createAlarmsSwitch: ${createAlarmsSwitch}]"
+  log "Configured with [serviceHostAddress: ${serverHostAddress}, playerMAC: ${playerMAC}, auth: ${auth}, createAlarmsSwitch: ${createAlarmsSwitch}, createPowerSwitch: ${createPowerSwitch}]"
 }
 
 def processJsonMessage(msg) {
@@ -141,6 +133,18 @@ def processJsonMessage(msg) {
     case "playerpref":
       processPlayerPref(msg)
       break
+  }
+}
+   
+private configureChildSwitch(createSwitch, switchDni, switchNameSuffix) {
+
+  if (createSwitch) {
+    if (!getChildDevice(switchDni)) {
+      def childSwitch = addChildDevice("Squeezebox Player Child Switch", switchDni)
+      childSwitch.name = "${device.name} - ${switchNameSuffix}"
+    }
+  } else if (getChildDevice(switchDni)) {
+    deleteChildDevice(switchDni)
   }
 }
 
@@ -169,17 +173,22 @@ private processTime(msg) {
 private processPlayerPref(msg) {
 
   if (msg.params[1][1] == "alarmsEnabled") {
-    def alarmsSwitch = getChildDevice(getAlarmsSwitchDni())
+    def alarmsSwitch = getChildDevice(alarmSwitchDni)
     alarmsSwitch?.update(msg.result?.get("_p2") == "1")    
   }
 }
 
 private updatePower(onOff) {
 
+  boolean isOn = String.valueOf(onOff) == "1";
+  String onOffString = isOn ? "on" : "off"
   String current = device.currentValue("switch")
-  String onOffString = String.valueOf(onOff) == "1" ? "on" : "off"
+
+  def powerSwitch = getChildDevice(powerSwitchDni)
+  powerSwitch?.update(isOn)
 
   if (current != onOffString) {
+
     sendEvent(name: "switch", value: onOffString, displayed: true)
     return true
  
@@ -252,7 +261,7 @@ private statusRefresh() {
 }
 
 private alarmRefresh() {
-  if (getChildDevice(getAlarmsSwitchDni())) {
+  if (getChildDevice(alarmsSwitchDni)) {
     executeCommand(["playerpref", "alarmsEnabled", "?"]) 
   }
 }
@@ -694,6 +703,32 @@ def shuffle(shuffle=null) {
   def mode = tryConvertToIndex(shuffle, shuffleModes)
   executeCommand(["playlist", "shuffle", mode])
   commandRefresh()
+}
+
+/************************
+ * Child Switch Methods *
+ ************************/
+
+def childSwitchedOn(childDni) {
+  
+  if (childDni == powerSwitchDni) {
+    on()
+  } else if (childDni == alarmsSwitchDni) {
+    enableAlarms()
+  } else {
+    log.warn "childSwitchedOn invoked by unrecognised device: ${childDni}"
+  }
+}
+
+def childSwitchedOff(childDni) {
+
+  if (childDni == powerSwitchDni) {
+    off()
+  } else if (childDni == alarmsSwitchDni) {
+    disableAlarms()
+  } else {
+    log.warn "childSwitchedOff invoked by unrecognised device: ${childDni}"
+  }
 }
 
 /*******************

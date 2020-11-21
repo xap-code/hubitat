@@ -32,6 +32,7 @@
  * 27/04/2020 - Reset busy status after skipping 10 server status updates
  * 29/05/2020 - Don't poll details for disabled player devices
  * 10/09/2020 - Replace ugly scheduling code with better solution
+ * 21/11/2020 - Add child switch device for extra player power switch
  */
 definition(
   name: "Squeezebox Connect",
@@ -72,6 +73,10 @@ preferences {
     section("<h3>Enable/Disable Alarms Switch</h3>") {
       paragraph("Selected players will create a child switch device which can be used to enable/disable all alarms on that player.")
       input(name: "createAlarmsSwitchPlayers", type: "enum", title: "Create Alarms Switch For Players", multiple: true, options: selectedPlayers)
+    }
+    section("<h3>Enable/Disable Extra Power Switch</h3>") {
+      paragraph("Selected players will create a child switch device which can be used to switch that player on or off. This is an extra switch that can be used to link the player with Google Home to switch it on and off without Google mistaking the player as a light.")
+      input(name: "createPowerSwitchPlayers", type: "enum", title: "Create Power Switch For Players", multiple: true, options: selectedPlayers)
     }
   }
 }
@@ -174,7 +179,7 @@ def initializePlayers() {
       )
     }
     // always configure the player in case the server settings have changed
-    player.configure(serverHostAddress, it.mac, state.auth, createAlarmsSwitchPlayers?.contains(it.name))
+    player.configure(serverHostAddress, it.mac, state.auth, createAlarmsSwitchPlayers?.contains(it.name), createPowerSwitchPlayers?.contains(it.name))
     // refresh the player to initialise state
     player.refresh()
   }
