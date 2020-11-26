@@ -173,7 +173,7 @@ private processTime(msg) {
 private processPlayerPref(msg) {
 
   if (msg.params[1][1] == "alarmsEnabled") {
-    def alarmsSwitch = getChildDevice(alarmSwitchDni)
+    def alarmsSwitch = getChildDevice(alarmsSwitchDni)
     alarmsSwitch?.update(msg.result?.get("_p2") == "1")    
   }
 }
