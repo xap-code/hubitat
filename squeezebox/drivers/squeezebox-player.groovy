@@ -29,6 +29,9 @@
  * 20/04/2020 - Add excludeFromPolling preference
  * 20/04/2020 - Add 500ms delay before post-command refresh
  * 21/11/2020 - Add optional child switch for power
+ * 24/09/2021 - Set HTTP timeout to 60s
+ * 24/09/2021 - Fix bug related to alarms switch not updating
+ * 24/09/2021 - Reformat indentation
  */
 metadata {
   definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
@@ -173,7 +176,7 @@ private processTime(msg) {
 private processPlayerPref(msg) {
 
   if (msg.params[1][1] == "alarmsEnabled") {
-    def alarmsSwitch = getChildDevice(alarmSwitchDni)
+    def alarmsSwitch = getChildDevice(alarmsSwitchDni)
     alarmsSwitch?.update(msg.result?.get("_p2") == "1")    
   }
 }
@@ -643,26 +646,25 @@ def speakCurrentTrack() {
 
 private getArtistForListAlbums(artistSearch, response) {
     
-    def artists = response?.data?.result?.contributors_loop
+  def artists = response?.data?.result?.contributors_loop
     
-    switch (artists?.size()) {
-        case null:
-        case 0:
-          announce("Sorry, I couldn't find any artists matching ${artistSearch}. Please try providing less of the artist name.")
-          break
-        case 1:
-          listArtistAlbums(artists.first())
-          break
-        default:
-          def exactArtist = artists.find { it.contributor.equalsIgnoreCase(artistSearch.trim()) }
-          if (exactArtist) {
-            listArtistAlbums(exactArtist)
-          } else {
-            def artistNames = artists.collect({ it.contributor }).join(", ")
-            announce("I found multiple matching artists: ${artistNames}. Please try providing more of the artist name.")
-          }
-          break
-    }
+  switch (artists?.size()) {
+    case null:
+    case 0:
+      announce("Sorry, I couldn't find any artists matching ${artistSearch}. Please try providing less of the artist name.")
+      break
+    case 1:
+      listArtistAlbums(artists.first())
+      break
+    default:
+      def exactArtist = artists.find { it.contributor.equalsIgnoreCase(artistSearch.trim()) }
+      if (exactArtist) {
+        listArtistAlbums(exactArtist)
+      } else {
+        def artistNames = artists.collect({ it.contributor }).join(", ")
+        announce("I found multiple matching artists: ${artistNames}. Please try providing more of the artist name.")
+      }
+  }
 }
 
 private listArtistAlbums(artist) {
@@ -673,21 +675,21 @@ private listArtistAlbums(artist) {
 
 private listAlbums(artistName, response) {
   
-    def albums = response?.data?.result?.albums_loop?.collect { it.album }
+  def albums = response?.data?.result?.albums_loop?.collect { it.album }
     
-    switch (albums?.size()) {
-        case null:
-        case 0:
-          announce("Sorry, I couldn't find any albums for ${artistName}.")
-          break
-        case 1:
-          announce("I found one album for ${artistName}: ${albums.first()}")
-         break
-        default:
-          def lastAlbum = albums.pop() 
-          def albumList = "${albums.toSorted().join(", ")} and ${lastAlbum}"
-          announce("I found ${albums.size()} albums for ${artistName}: ${albumList}.")
-    }
+  switch (albums?.size()) {
+    case null:
+    case 0:
+      announce("Sorry, I couldn't find any albums for ${artistName}.")
+      break
+    case 1:
+      announce("I found one album for ${artistName}: ${albums.first()}")
+      break
+    default:
+      def lastAlbum = albums.pop() 
+      def albumList = "${albums.toSorted().join(", ")} and ${lastAlbum}"
+      announce("I found ${albums.size()} albums for ${artistName}: ${albumList}.")
+  }
 }
 
 //--- Repeat and Shuffle
@@ -756,15 +758,16 @@ private buildParams(json) {
 
   def params = [
     uri: "http://${state.serverHostAddress}",
-		path: "jsonrpc.js",
-		requestContentType: 'application/json',
-		contentType: 'application/json',
-		body: json.toString()
-	]
+    path: "jsonrpc.js",
+    requestContentType: 'application/json',
+    contentType: 'application/json',
+    timeout: 60,
+    body: json.toString()
+  ]
   
-	if (state.auth) {
-		params.headers = ["Authorization": "Basic ${state.auth}"]
-	}
+  if (state.auth) {
+    params.headers = ["Authorization": "Basic ${state.auth}"]
+  }
   
   params
 }

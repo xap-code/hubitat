@@ -33,6 +33,9 @@
  * 29/05/2020 - Don't poll details for disabled player devices
  * 10/09/2020 - Replace ugly scheduling code with better solution
  * 21/11/2020 - Add child switch device for extra player power switch
+ * 24/09/2021 - Only skip 2 server requests before resetting busy flag
+ * 24/09/2021 - Set HTTP timeout to 60s
+ * 24/09/2021 - Reformat indentation
  */
 definition(
   name: "Squeezebox Connect",
@@ -268,19 +271,19 @@ private unsetBusy() {
 
 private getServerStatus() {
 
-	// very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
-	if (state.busy) {
+  // very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
+  if (state.busy) {
     log.warn("Skipping request to refresh server status as still waiting on previous request. Hub network IO could be busy. If this occurs often then check network connectivity between HE Hub and LMS Server or consider increasing player refresh interval.")
     state.skipped = state.skipped ? state.skipped + 1 : 1
-    if (state.skipped == 10) {
-      log.warn("Skipped 10 requests. Resetting busy status to allow server status refresh on next attempt.")
+    if (state.skipped == 2) {
+      log.warn("Skipped 2 requests. Resetting busy status to allow server status refresh on next attempt.")
       unsetBusy()
     }
-	} else {
-		setBusy()
-		// instructs Squeezebox Server to give high level status info on all connected players
-		executeCommand(["", ["serverstatus", 0, 99]])
-	}
+  } else {
+    setBusy()
+    // instructs Squeezebox Server to give high level status info on all connected players
+    executeCommand(["", ["serverstatus", 0, 99]])
+  }
 }
 
 def updatePlayers() {
@@ -347,21 +350,22 @@ def executeCommand(params) {
 
   log "Squeezebox Connect Send: ${params}"
 
-	def jsonBody = buildJsonRequest(params)
+  def jsonBody = buildJsonRequest(params)
 
-	def postParams = [
-		uri: "http://${serverIP}:${serverPort}",
-		path: "jsonrpc.js",
-		requestContentType: 'application/json',
-		contentType: 'application/json',
-		body: jsonBody.toString()
-	]
+  def postParams = [
+    uri: "http://${serverIP}:${serverPort}",
+    path: "jsonrpc.js",
+    requestContentType: 'application/json',
+    contentType: 'application/json',
+    timeout: 60,
+    body: jsonBody.toString()
+  ]
 
-	if (state.auth) {
-		postParams.headers = ["Authorization": "Basic ${state.auth}"]
-	}
+  if (state.auth) {
+    postParams.headers = ["Authorization": "Basic ${state.auth}"]
+  }
 
-	asynchttpPost "receiveHttpResponse", postParams
+  asynchttpPost "receiveHttpResponse", postParams
 }
 
 // build the JSON content for the Squeezebox Server request
@@ -381,22 +385,22 @@ def buildJsonRequest(params) {
 // receive the Squeezebox Server response and extract the JSON
 def receiveHttpResponse(response, data) {
 
-	try {
+  try {
 
-		if (response.status == 200) {
+    if (response.status == 200) {
 
-			def json = response.json
-			if (json) {
-				processJsonMessage(json)
-			} else {
-				log.warn "Received response that didn't contain any JSON"
-			}
+      def json = response.json
+      if (json) {
+        processJsonMessage(json)
+      } else {
+        log.warn "Received response that didn't contain any JSON"
+      }
 
-		} else {
-			log.warn "Received error response [${response.status}] : ${response.errorMessage}"
-		}
+    } else {
+      log.warn "Received error response [${response.status}] : ${response.errorMessage}"
+    }
 
-	} finally {
-		unsetBusy()
-	}
+  } finally {
+    unsetBusy()
+  }
 }
