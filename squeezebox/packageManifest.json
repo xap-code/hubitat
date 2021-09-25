@@ -4,7 +4,7 @@
   "minimumHEVersion": "2.2",
   "dateReleased": "2021-09-25",
   "documentationLink": "https://github.com/xap-code/hubitat/blob/master/squeezebox/README.md",
-  "communityLink": "https://community.hubitat.com/t/release-squeezebox-integration-logitech-media-server/4489"
+  "communityLink": "https://community.hubitat.com/t/release-squeezebox-integration-logitech-media-server/4489",
   "apps": [
     {
       "id": "79a3861f-870e-45f7-9d50-53f508bba8cb",
