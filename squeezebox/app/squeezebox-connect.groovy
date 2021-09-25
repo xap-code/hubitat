@@ -1,9 +1,6 @@
 /**
  *  Squeezebox Connect
  *
- *  Git Hub Raw Link - Use for Import into Hubitat
- *  https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy
- *
  *  Copyright 2017 Ben Deitch
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -18,24 +15,24 @@
  */
 
 /* ChangeLog:
- * 13/10/2018 - Added support for password protection
- * 14/10/2018 - Added support for player synchronization
- * 14/10/2018 - Added transferPlaylist
- * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
- * 09/02/2019 - Changed server polling to use Async HTTP call
- * 05/04/2019 - Add basic sync mechanism to prevent multiple server status requests building up
- * 10/04/2019 - Change sync mechanism to warning if server requests are overlapping
- * 13/04/2020 - Adjust busy state logic
- * 13/04/2020 - merge PR to include git hub link in header
- * 13/04/2020 - Skip server status updates when busy
- * 20/04/2020 - Support player excludeFromPolling preference
- * 27/04/2020 - Reset busy status after skipping 10 server status updates
- * 29/05/2020 - Don't poll details for disabled player devices
- * 10/09/2020 - Replace ugly scheduling code with better solution
- * 21/11/2020 - Add child switch device for extra player power switch
- * 24/09/2021 - Only skip 2 server requests before resetting busy flag
+ * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 24/09/2021 - Set HTTP timeout to 60s
- * 24/09/2021 - Reformat indentation
+ * 24/09/2021 - Only skip 2 server requests before resetting busy flag
+ * 21/11/2020 - Add child switch device for extra player power switch
+ * 10/09/2020 - Replace ugly scheduling code with better solution
+ * 29/05/2020 - Don't poll details for disabled player devices
+ * 27/04/2020 - Reset busy status after skipping 10 server status updates
+ * 20/04/2020 - Support player excludeFromPolling preference
+ * 13/04/2020 - Skip server status updates when busy
+ * 13/04/2020 - merge PR to include git hub link in header
+ * 13/04/2020 - Adjust busy state logic
+ * 10/04/2019 - Change sync mechanism to warning if server requests are overlapping
+ * 05/04/2019 - Add basic sync mechanism to prevent multiple server status requests building up
+ * 09/02/2019 - Changed server polling to use Async HTTP call
+ * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
+ * 14/10/2018 - Added transferPlaylist
+ * 14/10/2018 - Added support for player synchronization
+ * 13/10/2018 - Added support for password protection
  */
 definition(
   name: "Squeezebox Connect",
@@ -43,9 +40,8 @@ definition(
   author: "Ben Deitch",
   description: "Integrates a Squeezebox Server instance into Hubitat.",
   category: "My Apps",
-  iconUrl: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn.png",
-  iconX2Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@2x.png",
-  iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@3x.png")
+  importUrl: "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy",
+  iconUrl: "",  iconX2Url: "",  iconX3Url: "")
 
 preferences {
   page(name: "serverPage", title: "<h2>Configure Squeezebox Server</h2>", nextPage: "optionsPage", install: false, uninstall: true) {

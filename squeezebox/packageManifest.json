@@ -1,0 +1,36 @@
+{
+  "packageName": "Squeezebox Connect",
+  "author": "Ben Deitch",
+  "minimumHEVersion": "2.2",
+  "dateReleased": "2021-09-25",
+  "apps": [
+    {
+      "id": "79a3861f-870e-45f7-9d50-53f508bba8cb",
+      "name": "Squeezebox Connect",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy",
+	  "version": "1.0",
+      "required": true,
+      "oauth": false,
+      "primary": true
+    }
+  ],
+  "drivers": [
+    {
+      "id": "da889e2b-df7d-41d2-8ee3-ab6f0570b014",
+      "name": "Squeezebox Player",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy",
+	  "version": "1.0",
+      "required": true
+    },
+    {
+      "id": "974932f7-65b1-4f99-a56b-4ee3d3265f5a",
+      "name": "Squeezebox Player Child Switch",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player-child-switch.groovy",
+	  "version": "1.0",
+      "required": true
+    }
+  ]
+}

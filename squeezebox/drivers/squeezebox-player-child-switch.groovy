@@ -1,9 +1,6 @@
 /**
  *  Squeezebox Player Child Switch
  *
- *  Git Hub Raw Link - Use for Import into Hubitat
- *  https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player-alarms-switch.groovy
- *
  *  Copyright 2017 Ben Deitch
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -18,12 +15,18 @@
  */
 
 /* ChangeLog:
- * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
- * 13/04/2020 - Include git link
+ * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 21/11/2020 - Change to generic child switch to allow use as separate player power switch as well
+ * 13/04/2020 - Include git link
+ * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
  */
 metadata {
-  definition (name: "Squeezebox Player Child Switch", namespace: "xap", author: "Ben Deitch") {
+  definition (
+    name: "Squeezebox Player Child Switch",
+    namespace: "xap",
+    author: "Ben Deitch",
+    importUrl: "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player-child-switch.groovy"
+  ) {
     capability "Actuator"
     capability "Sensor"
     capability "Switch"

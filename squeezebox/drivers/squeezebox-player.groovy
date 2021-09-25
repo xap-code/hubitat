@@ -1,40 +1,53 @@
 /**
  *  Squeezebox Player
  *
- *  Git Hub Raw Link - Use for Import into Hubitat
- *  https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy
- *
  *  Copyright 2017 Ben Deitch
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
  *
  */
 
 /* ChangeLog:
- * 13/10/2018 - Added support for password protection
- * 14/10/2018 - Added support for player synchronization
- * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
- * 14/10/2018 - Added transferPlaylist
- * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
- * 16/10/2018 - Add methods to play albums, artists and songs by name
- * 16/10/2018 - Add methods to control repeat and shuffle mode
- * 16/10/2018 - Speak error message if search by name fails
- * 17/10/2018 - Add method to speak the names of an artist's albums
- * 18/10/2018 - Adjust spoken error messages to be more useful and less specific to voice control
- * 18/10/2018 - Replace '&' in TTS input with ' and '
- * 03/06/2019 - Resume playing track (instead of restore) after speaking
- * 03/06/2019 - Add speakCurrentTrack() command
- * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
- * 05/04/2020 - Support Audio Notification capability
- * 13/04/2020 - merge PR to include git hub link in header
- * 13/04/2020 - Use async http method for player commands
- * 20/04/2020 - Add excludeFromPolling preference
- * 20/04/2020 - Add 500ms delay before post-command refresh
- * 21/11/2020 - Add optional child switch for power
- * 24/09/2021 - Set HTTP timeout to 60s
- * 24/09/2021 - Fix bug related to alarms switch not updating
+ * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
+ * 25/09/2021 - Use @Field for constant lists
  * 24/09/2021 - Reformat indentation
- */
+ * 24/09/2021 - Fix bug related to alarms switch not updating
+ * 24/09/2021 - Set HTTP timeout to 60s
+ * 21/11/2020 - Add optional child switch for power
+ * 20/04/2020 - Add 500ms delay before post-command refresh
+ * 20/04/2020 - Add excludeFromPolling preference
+ * 13/04/2020 - Use async http method for player commands
+ * 13/04/2020 - merge PR to include git hub link in header
+ * 05/04/2020 - Support Audio Notification capability
+ * 03/06/2019 - Change type of playFavorite argument NUMBER -> INTEGER
+ * 03/06/2019 - Add speakCurrentTrack() command
+ * 03/06/2019 - Resume playing track (instead of restore) after speaking
+ * 18/10/2018 - Replace '&' in TTS input with ' and '
+ * 18/10/2018 - Adjust spoken error messages to be more useful and less specific to voice control
+ * 17/10/2018 - Add method to speak the names of an artist's albums
+ * 16/10/2018 - Speak error message if search by name fails
+ * 16/10/2018 - Add methods to control repeat and shuffle mode
+ * 16/10/2018 - Add methods to play albums, artists and songs by name
+ * 15/10/2018 - Add child switch device for Enable/Disable All Alarms
+ * 14/10/2018 - Added transferPlaylist
+ * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
+ * 14/10/2018 - Added support for player synchronization
+ * 13/10/2018 - Added support for password protection
+*/
 metadata {
-  definition (name: "Squeezebox Player", namespace: "xap", author: "Ben Deitch") {
+  definition (
+    name: "Squeezebox Player",
+    namespace: "xap",
+    author: "Ben Deitch",
+    importUrl: "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy"
+  ) {
     capability "Actuator"
     capability "Audio Notification"
     capability "Music Player"
@@ -44,9 +57,9 @@ metadata {
     capability "Switch"
 
     attribute "playerMAC", "STRING"
-    attribute "repeat", "ENUM", repeatModes
+    attribute "repeat", "ENUM", REPEAT_MODE
     attribute "serverHostAddress", "STRING"
-    attribute "shuffle", "ENUM", shuffleModes
+    attribute "shuffle", "ENUM", SHUFFLE_MODE
     attribute "syncGroup", "STRING"
     
     command "clearPlaylist"
@@ -61,8 +74,8 @@ metadata {
     command "playFavorite", ["INTEGER"]
     command "playSong", ["STRING"]
     command "playTrackAtVolume", ["STRING","NUMBER"]
-    command "repeat", [repeatModes]
-    command "shuffle", [shuffleModes]
+    command "repeat", [REPEAT_MODE]
+    command "shuffle", [SHUFFLE_MOE]
     command "speakArtistAlbums", ["STRING"]
     command "speakCurrentTrack"
     command "sync", ["STRING"]
@@ -76,15 +89,13 @@ metadata {
   }
 }
 
+import groovy.transform.Field
+
 // define constants for repeat mode (order must match LMS modes)
-def getRepeatModes() {
-  ["off", "song", "playlist"]
-}
+@Field static final List REPEAT_MODE = ["off", "song", "playlist"]
 
 // define constants for shuffle mode (order must match LMS modes)
-def getShuffleModes() {
-  ["off", "song", "album"]
-}
+@Field static final List SHUFFLE_MODE = ["off", "song", "album"]
 
 def isExcluded() {
   excludeFromPolling
@@ -225,11 +236,11 @@ private updatePlayPause(playpause) {
 }
 
 private updateRepeat(repeat) {
-  sendEvent(name: "repeat", value: repeatModes[Integer.valueOf(repeat)], displayed: true)
+  sendEvent(name: "repeat", value: REPEAT_MODE[Integer.valueOf(repeat)], displayed: true)
 }
 
 private updateShuffle(shuffle) {
-  sendEvent(name: "shuffle", value: shuffleModes[Integer.valueOf(shuffle)], displayed: true)
+  sendEvent(name: "shuffle", value: SHUFFLE_MODE[Integer.valueOf(shuffle)], displayed: true)
 }
 
 private updateTrackUri(trackUri) {
@@ -695,14 +706,14 @@ private listAlbums(artistName, response) {
 //--- Repeat and Shuffle
 def repeat(repeat=null) {
   log "repeat(\"${repeat}\")"
-  def mode = tryConvertToIndex(repeat, repeatModes)
+  def mode = tryConvertToIndex(repeat, REPEAT_MODE)
   executeCommand(["playlist", "repeat", mode])
   commandRefresh()
 }
 
 def shuffle(shuffle=null) {
   log "shuffle(\"${shuffle}\")"
-  def mode = tryConvertToIndex(shuffle, shuffleModes)
+  def mode = tryConvertToIndex(shuffle, SHUFFLE_MODE)
   executeCommand(["playlist", "shuffle", mode])
   commandRefresh()
 }
