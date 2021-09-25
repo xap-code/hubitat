@@ -7,7 +7,7 @@
       "name": "Squeezebox Connect",
       "category": "Integrations",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/packageManifest.json",
-      "description": "Integrates a Squeezebox Server (LMS) instance into Hubitat."
+      "description": "Integrates a Squeezebox Server (LMS) instance into Hubitat.",
 	  "tags": ["LAN", "Multimedia", "Speakers"]
     }
   ]
