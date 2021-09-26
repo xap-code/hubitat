@@ -132,7 +132,7 @@ def removeChildDevices(delete) {
 
 def initialize() {
   initializeServer()
-  //initializePlayers()
+  initializePlayers()
 }
 
 def isPasswordProtected() {
@@ -198,9 +198,7 @@ private initializePlayers() {
       )
     }
     // always configure the player in case the server settings have changed
-    player.configure(it.id, createAlarmsSwitchPlayers?.contains(it.name), createPowerSwitchPlayers?.contains(it.name))
-    // refresh the player to initialise state
-    player.refresh()
+    player.configure(createAlarmsSwitchPlayers?.contains(it.name), createPowerSwitchPlayers?.contains(it.name))
   }
   
   // delete any child devices for players that are no longer selected
@@ -285,12 +283,18 @@ private processCliPort(msg) {
 /****************************
  * Methods for Child Devices *
  ****************************/
-def playerMessageReceived(data) {
+def sendPlayerCommand(player, params) {
+  String encoded = params.each { URLEncoder.encode String.valueOf(it) }.collect().join(" ")
+  server.sendMsg "${player.device.deviceNetworkId} ${encoded}"
+}
 
-  def player = getChildDevice(data[0])
+def playerMessageReceived(msg) {
 
-  if (!player) {
-    log "Ignoring message for unregistered player: $data"
+  def player = getChildDevice(msg[0])
+  if (player) {
+    player.processMessage(msg)
+  } else {
+    log "Ignoring message for unregistered player: $msg"
   }
 }
 

@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * ??/??/???? - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 25/09/2021 - Use @Field for constant lists
  * 24/09/2021 - Reformat indentation
@@ -83,10 +84,6 @@ metadata {
     command "unsync"
     command "unsyncAll"
   }
-  
-  preferences {
-    input name: "excludeFromPolling", type: "bool", title: "Exclude from server polling (Player state is still refreshed after sending a command via Hubitat)", defaultValue: false
-  }
 }
 
 import groovy.transform.Field
@@ -97,10 +94,6 @@ import groovy.transform.Field
 // define constants for shuffle mode (order must match LMS modes)
 @Field static final List SHUFFLE_MODE = ["off", "song", "album"]
 
-def isExcluded() {
-  excludeFromPolling
-}
-
 def log(message) {
   if (getParent().debugLogging) {
     log.debug message
@@ -108,34 +101,26 @@ def log(message) {
 }
 
 def getAlarmsSwitchDni() {
-  "${state.playerMAC}-alarms"
+  "${device.deviceNetworkId}-alarms"
 }
 
 def getPowerSwitchDni() {
-  "${state.playerMAC}-power"
+  "${device.deviceNetworkId}-power"
 }
 
-def configure(serverHostAddress, playerMAC, auth, createAlarmsSwitch, createPowerSwitch) {
-    
-  state.serverHostAddress = serverHostAddress
-  sendEvent(name: "serverHostAddress", value: state.serverHostAddress, displayed: false, isStateChange: true)
-
-  state.playerMAC = playerMAC
-  sendEvent(name: "playerMAC", value: state.playerMAC, displayed: false, isStateChange: true)
-    
-  state.auth = auth
+def configure(createAlarmsSwitch, createPowerSwitch) {
     
   configureChildSwitch(createAlarmsSwitch, alarmsSwitchDni, "All Alarms")
   configureChildSwitch(createPowerSwitch, powerSwitchDni, "Power")
       
-  log "Configured with [serviceHostAddress: ${serverHostAddress}, playerMAC: ${playerMAC}, auth: ${auth}, createAlarmsSwitch: ${createAlarmsSwitch}, createPowerSwitch: ${createPowerSwitch}]"
+  log "Configured with [createAlarmsSwitch: ${createAlarmsSwitch}, createPowerSwitch: ${createPowerSwitch}]"
 }
 
-def processJsonMessage(msg) {
+def processMessage(String[] msg) {
 
   log "Squeezebox Player Received [${device.name}]: ${msg}"
-
-  def command = msg.params[1][0]
+  
+  def command = msg[1]
 
   switch (command) {
     case "status":
@@ -145,8 +130,15 @@ def processJsonMessage(msg) {
       processTime(msg)
       break
     case "playerpref":
-      processPlayerPref(msg)
+      processPlayerpref(msg)
       break
+    case "playlist":
+      processPlaylist(msg)
+      break
+    case "prefset":
+      processPrefset(msg)
+    default:
+      log "Ignored player message: ${msg}"
   }
 }
    
@@ -164,31 +156,70 @@ private configureChildSwitch(createSwitch, switchDni, switchNameSuffix) {
 
 private processStatus(msg) {
 
-  updatePower(msg.result?.get("power"))
-  updateVolume(msg.result?.get("mixer volume"))
-  updatePlayPause(msg.result?.get("mode"))
-  updateRepeat(msg.result?.get("playlist repeat"))
-  updateShuffle(msg.result?.get("playlist shuffle"))
-  updateSyncGroup(msg.result?.get("sync_master"), msg.result?.get("sync_slaves"))
-    
-  def trackDetails = msg.result?.playlist_loop?.get(0)
-  updateTrackUri(trackDetails?.url)
-  String trackDescription
-  if (trackDetails) {
-    trackDescription = trackDetails.artist ? "${trackDetails.title} by ${trackDetails.artist}" : trackDetails.title
-  }
+  values = tagValues(msg)
+  
+  ifPresent(values, "power", "updatePower")
+  ifPresent(values, "mixer volume", "updateVolume")
+  ifPresent(values, "mode", "updatePlayPause")
+  ifPresent(values, "playlist repeat", "updateRepeat")
+  ifPresent(values, "playlist shuffle", "updateShuffle")
+
+  updateTrackUri(values.get("url"))
+  updateSyncGroup(values.get("sync_master"), values.get("sync_slaves"))
+
+  String trackDescription = values.get("artist") ? "${values.get("title")} by ${values.get("artist")}" : values.get("title")
   updateTrackDescription(trackDescription)
 }
 
 private processTime(msg) {
-  state.trackTime = msg.result?.get("_time")
+  state.trackTime = msg[2]
 }
 
-private processPlayerPref(msg) {
+private processPlayerpref(msg) {
 
-  if (msg.params[1][1] == "alarmsEnabled") {
+  if (msg[2] == "alarmsEnabled") {
     def alarmsSwitch = getChildDevice(alarmsSwitchDni)
-    alarmsSwitch?.update(msg.result?.get("_p2") == "1")    
+    alarmsSwitch?.update(msg[3] == "1")    
+  }
+}
+
+private processPlaylist(msg) {
+  
+  switch (msg[2]) {
+
+    case "pause":
+      updatePlayPause(msg[3] == "1" ? "pause" : "play")
+      break
+
+    case "stop":
+      updatePlayPause("stop")
+      break
+    
+    case "open":
+      updatePlayPause("play")
+      statusRefresh()
+      break
+    
+    case "clear":
+      updateTrackUri(null)
+      updateTrackDescription(null)
+      break
+  } 
+}
+
+private processPrefset(msg) {
+  
+  if (msg[2] == "server") {
+    switch (msg[3]) {
+      
+      case "volume":
+        updateVolume(msg[4])
+        break
+      
+      case "power":
+        updatePower(msg[4])
+        break
+    }
   }
 }
 
@@ -271,17 +302,13 @@ private updateSyncGroup(syncMaster, syncSlaves) {
  ************/
 
 private statusRefresh() {
-  executeCommand(["status", "-", 1, "tags:abclsu"]) 
+  sendCommand(["status", "-", 1, "tags:abclsu"]) 
 }
 
 private alarmRefresh() {
   if (getChildDevice(alarmsSwitchDni)) {
-    executeCommand(["playerpref", "alarmsEnabled", "?"]) 
+    sendCommand(["playerpref", "alarmsEnabled", "?"]) 
   }
-}
-
-private commandRefresh() {
-  runInMillis 500, "statusRefresh"
 }
 
 def refresh() {
@@ -292,78 +319,67 @@ def refresh() {
 //--- Power
 def on() {
   log "on()"
-  executeCommand(["power", 1])
-  commandRefresh()
+  sendCommand(["power", 1])
 }
 
 def off() {
   log "off()"
-  executeCommand(["power", 0])
-  commandRefresh()  
+  sendCommand(["power", 0])
 }
 
 //--- Volume
 private setVolume(volume) {
-  executeCommand(["mixer", "volume", volume])
+  sendCommand(["mixer", "volume", volume])
 }
 
 def setLevel(level) {
   log "setLevel(${level})"
   setVolume(level)
-  commandRefresh()
 }
 
 def mute() {
   log "mute()"
-  executeCommand(["mixer", "muting", 1])
-  commandRefresh() 
+  sendCommand(["mixer", "muting", 1])
 }
 
 def unmute() {
   log "unmute()"
-  executeCommand(["mixer", "muting", 0])
-  commandRefresh() 
+  sendCommand(["mixer", "muting", 0])
 }
 
 //--- Playback
 private executePlayAndRefresh(uri) {
-  executeCommand(["playlist", "play", uri])
-  commandRefresh()  
+  sendCommand(["playlist", "play", uri])
 }
 
 def play() {
   log "play()"
-  executeCommand(["play"])
-  commandRefresh()
+  sendCommand(["play"])
 }
 
 def pause() {
   log "pause()"
-  executeCommand(["pause"])
-  commandRefresh() 
+  sendCommand(["pause"])
 }
 
 def stop() {
   log "stop()"
-  executeCommand(["stop"])
-  commandRefresh() 
+  sendCommand(["stop"])
 }
 
 def nextTrack() {
   log "nextTrack()"
-  executeCommand(["playlist", "jump", "+1"])
-  commandRefresh()  
+  sendCommand(["playlist", "jump", "+1"])
 }
 
 def previousTrack() {
   log "previousTrack()"
-  executeCommand(["playlist", "jump", "-1"])
-  commandRefresh() 
+  sendCommand(["playlist", "jump", "-1"])
 }
 
 def setTrack(trackToSet) {
   log "setTrack(\"${trackToSet}\")"
-  executeCommand(["playlist", "stop", trackToSet])
+  sendCommand(["playlist", "stop", trackToSet])
   stop()  
 }
 
@@ -395,7 +411,7 @@ def playUri(uri) {
 
 //--- resume/restore methods
 private captureTime() {
-  executeCommand(["time", "?"])
+  sendCommand(["time", "?"])
 }
 
 private clearCapturedTime() {
@@ -415,7 +431,7 @@ private clearCapturedVolume() {
 
 private previewAndGetDelay(uri, duration, volume=null) {
   captureTime()
-  executeCommand(["playlist", "preview", "url:${uri}", "silent:1"])
+  sendCommand(["playlist", "preview", "url:${uri}", "silent:1"])
   captureAndChangeVolume(volume)    
   return 2 + duration as int
 }
@@ -425,14 +441,13 @@ private restoreVolumeAndRefresh() {
     setVolume(state.previousVolume)
     clearCapturedVolume()
   }
-  commandRefresh()
 }
 
 // this method is also used by the server when sending a playlist to this player
 def resumeTempPlaylistAtTime(tempPlaylist, time=null) {
-  executeCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
+  sendCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
   if (time) {
-    executeCommand(["time", time])
+    sendCommand(["time", time])
   }
 }
 
@@ -447,7 +462,7 @@ def resume() {
 def restore() {
   log "restore()"
   def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
-  executeCommand(["playlist", "preview", "cmd:stop"])
+  sendCommand(["playlist", "preview", "cmd:stop"])
   restoreVolumeAndRefresh()
 }
 
@@ -468,8 +483,7 @@ def playTrackAndRestore(uri, duration, volume=null) {
 def playFavorite(index) {
   log "playFavorite(${index})"
   int intIndex = Integer.valueOf(index)
-  executeCommand(["favorites", "playlist", "play", "item_id:${intIndex - 1}"])
-  commandRefresh()
+  sendCommand(["favorites", "playlist", "play", "item_id:${intIndex - 1}"])
 }
 
 def fav1() { playFavorite(1) }
@@ -527,33 +541,31 @@ def speak(text) {
 }
 
 //--- Synchronization
-private getPlayerMacs(players) {
-  players?.collect { parent.getChildDeviceMac(it) }
+private getPlayerIds(players) {
+  players?.collect { parent.getChildDeviceId(it) }
     .findAll { it != null }
 }
 
 def sync(slaves) {
   log "sync(\"${slaves}\")"
   def parent = getParent()
-  def slaveMacs = getPlayerMacs(slaves.tokenize(","))
-  if (slaveMacs) {
-    slaveMacs.each { executeCommand(["sync", it]) }
-    refresh()
+  def slaveIds = getPlayerIds(slaves.tokenize(","))
+  if (slaveIds) {
+    slaveIds.each { sendCommand(["sync", it]) }
   }
 }
 
 def unsync() {
   log "unsync()"
-  executeCommand(["sync", "-"])
-  commandRefresh()
+  sendCommand(["sync", "-"])
 }
 
 def unsyncAll() {
   log "unsyncAll()"
   def slaves = state.syncGroup?.findAll { it != device.name }
-  def syncGroupMacs = getPlayerMacs(slaves)
-  if (syncGroupMacs) {
-    getParent().unsyncAll(syncGroupMacs)
+  def syncGroupIds = getPlayerIds(slaves)
+  if (syncGroupIds) {
+    getParent().unsyncAll(syncGroupIds)
   }
 }
 
@@ -561,32 +573,28 @@ def unsyncAll() {
 def transferPlaylist(destination) {
   log "transferPlaylist(\"${destination}\")"
   def tempPlaylist = "tempplaylist_from_" + state.playerMAC.replace(":", "")
-  executeCommand(["playlist", "save", tempPlaylist])
+  sendCommand(["playlist", "save", tempPlaylist])
   captureTime()
   if (getParent().transferPlaylist(destination, tempPlaylist, state.trackTime)) {
-    executeCommand(["playlist", "clear"])
+    sendCommand(["playlist", "clear"])
   }
   clearCapturedTime()
-  commandRefresh()
 }
 
 def clearPlaylist() {
   log "clearPlaylist()"
-  executeCommand(["playlist", "clear"])
-  commandRefresh()
+  sendCommand(["playlist", "clear"])
 }
 
 //--- Alarms
 def disableAlarms() {
   log "disableAlarms()"
-  executeCommand(["alarm", "disableall"])
-  refresh()
+  sendCommand(["alarm", "disableall"])
 }
 
 def enableAlarms() {
   log "enableAlarms()"
-  executeCommand(["alarm", "enableall"])
-  refresh()
+  sendCommand(["alarm", "enableall"])
 }
 
 //--- Library Methods
@@ -602,8 +610,7 @@ def checkAlbumSuccess() {
 
 def playAlbum(search) {
   log "playAlbum(\"${search}\")"
-  executeCommand(["playlist", "loadtracks", "album.titlesearch=${search}"])
-  commandRefresh()
+  sendCommand(["playlist", "loadtracks", "album.titlesearch=${search}"])
   runIn(3, checkAlbumSuccess)
 }
 
@@ -613,8 +620,7 @@ def checkArtistSuccess() {
 
 def playArtist(search) {
   log "playAlbum(\"${search}\")"
-  executeCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
-  commandRefresh()
+  sendCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
   runIn(3, checkArtistSuccess)
 }
 
@@ -624,14 +630,13 @@ def checkSongSuccess() {
 
 def playSong(search) {
   log "playSong(\"${search}\")"
-  executeCommand(["playlist", "loadtracks", "track.titlesearch=${search}"])
-  commandRefresh()
+  sendCommand(["playlist", "loadtracks", "track.titlesearch=${search}"])
   runIn(3, checkSongSuccess)
 }
 
 def speakArtistAlbums(artist) {
   log "speakArtistAlbums(\"${artist}\")"
-  executeQuery(["search", 0, 2, "term:${artist}"], { resp -> getArtistForListAlbums(artist, resp) })
+  sendCommand(["search", 0, 2, "term:${artist}"], { resp -> getArtistForListAlbums(artist, resp) })
 }
 
 private announce(text) {
@@ -681,7 +686,7 @@ private getArtistForListAlbums(artistSearch, response) {
 private listArtistAlbums(artist) {
    def artistName = artist.contributor
    def artistId = artist.contributor_id
-   executeQuery(["albums", 0, -1, "artist_id:${artistId}"], { resp -> listAlbums(artistName, resp) })
+   sendCommand(["albums", 0, -1, "artist_id:${artistId}"], { resp -> listAlbums(artistName, resp) })
 }
 
 private listAlbums(artistName, response) {
@@ -707,15 +712,13 @@ private listAlbums(artistName, response) {
 def repeat(repeat=null) {
   log "repeat(\"${repeat}\")"
   def mode = tryConvertToIndex(repeat, REPEAT_MODE)
-  executeCommand(["playlist", "repeat", mode])
-  commandRefresh()
+  sendCommand(["playlist", "repeat", mode])
 }
 
 def shuffle(shuffle=null) {
   log "shuffle(\"${shuffle}\")"
   def mode = tryConvertToIndex(shuffle, SHUFFLE_MODE)
-  executeCommand(["playlist", "shuffle", mode])
-  commandRefresh()
+  sendCommand(["playlist", "shuffle", mode])
 }
 
 /************************
@@ -754,69 +757,26 @@ private tryConvertToIndex(value, lowerCaseValues) {
   index < 0 ? value : index
 }
 
-private buildPlayerRequest(params) {
-    
-  def request = [
-    id: 1,
-    method: "slim.request",
-    params: [state.playerMAC, params]
-  ]
-    
-  new groovy.json.JsonBuilder(request)
-}
-
-private buildParams(json) {
-
-  def params = [
-    uri: "http://${state.serverHostAddress}",
-    path: "jsonrpc.js",
-    requestContentType: 'application/json',
-    contentType: 'application/json',
-    timeout: 60,
-    body: json.toString()
-  ]
-  
-  if (state.auth) {
-    params.headers = ["Authorization": "Basic ${state.auth}"]
+private ifPresent(tagValues, tag, action) {
+  if (tagValues.containsKey(tag)) {
+    "${action}"(tagValues.get(tag))
   }
-  
-  params
 }
 
-private executeQuery(params, callback) {
-  
-  def json = buildPlayerRequest(params)
-  
-  log "Squeezebox Player Send Query [${device.name}]: ${json}"
-
-  def postParams = buildParams(json)
-     
-  httpPost postParams, callback
+private tagValues(msg) {
+  def values = msg.collect { tagValue it }.findAll().collectEntries { [(it.tag) : it.value] }
 }
 
-private executeCommand(params) {
+private tagValue(msgLine) {
+  int tagEnd = msgLine.indexOf(":")
+  tagEnd >= 0
+  ? [ tag: msgLine.substring(0, tagEnd), value: msgLine.substring(tagEnd + 1) ]
+  : null
+}
+
+private sendCommand(params) {
 
   log "Squeezebox Player Send Command: ${params}"
 
-  def json = buildPlayerRequest(params)
-
-  def postParams = buildParams(json)
-
-  asynchttpPost "receiveCommandResponse", postParams
-}
-
-def receiveCommandResponse(response, data) {
-
-  if (response.status == 200) {
-
-    def json = response.json
-    if (json) {
-      processJsonMessage(json)
-    } else {
-      log.warn "Received response that didn't contain any JSON"
-    }
-
-  } else {
-    log.warn "Received error response [${response.status}] : ${response.errorMessage}"
-  }
+  parent.sendPlayerCommand(this, params)
 }
