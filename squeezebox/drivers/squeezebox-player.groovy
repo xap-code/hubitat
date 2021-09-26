@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v2.0.1 - Fix bug where All Alarms child switch was not updating
  * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 25/09/2021 - Use @Field for constant lists
@@ -136,11 +137,11 @@ def processMessage(String[] msg) {
     case "time":
       processTime(msg)
       break
-    case "playerpref":
-      processPlayerpref(msg)
-      break
     case "playlist":
       processPlaylist(msg)
+      break
+    case "playerpref":
+      processPlayerpref(msg)
       break
     case "prefset":
       processPrefset(msg)
@@ -186,14 +187,6 @@ private processTime(msg) {
   state.trackTime = msg[2]
 }
 
-private processPlayerpref(msg) {
-
-  if (msg[2] == "alarmsEnabled") {
-    def alarmsSwitch = getChildDevice(alarmsSwitchDni)
-    alarmsSwitch?.update(msg[3] == "1")    
-  }
-}
-
 private processPlaylist(msg) {
   
   switch (msg[2]) {
@@ -218,6 +211,13 @@ private processPlaylist(msg) {
   } 
 }
 
+private processPlayerpref(msg) {
+
+  if (msg[2] == "alarmsEnabled") {
+    updateAlarms(msg[3])
+  }
+}
+
 private processPrefset(msg) {
   
   if (msg[2] == "server") {
@@ -237,6 +237,10 @@ private processPrefset(msg) {
 
       case "syncgroupid":
         statusRefresh()
+        break
+
+      case "alarmsEnabled":
+        updateAlarms(msg[4])
         break
     }
   }
@@ -335,6 +339,11 @@ private updateSyncGroup(syncMaster, syncSlaves) {
   sendEvent(name: "syncGroup", value: syncGroup, displayed: true)
 }
 
+private updateAlarms(alarms) {
+  def alarmsSwitch = getChildDevice(alarmsSwitchDni)
+  alarmsSwitch?.update(alarms == "1")
+}
+
 /************
  * Commands *
  ************/
@@ -343,7 +352,7 @@ private statusRefresh() {
   sendCommand(["status", "-", 1, "tags:abclsu"]) 
 }
 
-private alarmRefresh() {
+private alarmsRefresh() {
   if (getChildDevice(alarmsSwitchDni)) {
     sendCommand(["playerpref", "alarmsEnabled", "?"]) 
   }
@@ -351,7 +360,7 @@ private alarmRefresh() {
 
 def refresh() {
   statusRefresh()
-  alarmRefresh()
+  alarmsRefresh()
 }
 
 //--- Power
