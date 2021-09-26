@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v2.0.5 - Use state rather than attribute for syncGroup
  * 26/09/2021 - v2.0.4 - Remove unused attributes
  * 26/09/2021 - v2.0.3 - Correct log message
  * 26/09/2021 - v2.0.2 - Fix bugs where power, syncGroup not updated
@@ -63,7 +64,6 @@ metadata {
 
     attribute "repeat", "ENUM", REPEAT_MODE
     attribute "shuffle", "ENUM", SHUFFLE_MODE
-    attribute "syncGroup", "STRING"
     
     command "clearPlaylist"
     command "fav1"
@@ -322,13 +322,13 @@ private updateTrackData(title, artist, album, uri) {
     "album": album,
     "image": "http://${parent.serverIP}:${parent.serverPort}/music/current/cover.jpg?player=${device.deviceNetworkId}",
     "uri": uri
-  ]) : "{}"
+  ]) : " "
 
   sendEvent(name: "trackData", value: trackData, displayed: true)
 }
 
 private updateTrackDescription(title, artist) {
-  String trackDescription = artist ? "${title} by ${artist}" : title
+  trackDescription = artist ? "${title} by ${artist}" : (title ?: " ")
   sendEvent(name: "trackDescription", value: trackDescription, displayed: true)
 }
 
@@ -336,14 +336,13 @@ private updateSyncGroup(syncMaster, syncSlaves) {
 
   def parent = getParent()
 
-  def syncGroup = syncMaster && syncSlaves
-    ? "${syncMaster},${syncSlaves}"
+  if (syncMaster && syncSlaves) {
+    state.syncGroup = "${syncMaster},${syncSlaves}"
       .tokenize(",")
       .collect { parent.getChildDeviceName(it) ?: "Unlinked Player" }
-      .join(" & ")
-    : null
-
-  sendEvent(name: "syncGroup", value: syncGroup, displayed: true)
+  } else {
+    state.remove("syncGroup")
+  }
 }
 
 private updateAlarms(alarms) {
@@ -616,7 +615,7 @@ def unsync() {
 
 def unsyncAll() {
   log "unsyncAll()"
-  def slaves = attribute("syncGroup")?.split(" & ").findAll { it != device.name }
+  def slaves = state.syncGroup?.findAll { it != device.name }
   def syncGroupIds = getPlayerIds(slaves)
   if (syncGroupIds) {
     getParent().unsyncAll(syncGroupIds)
