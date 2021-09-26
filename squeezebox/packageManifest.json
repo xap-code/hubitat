@@ -11,7 +11,7 @@
       "name": "Squeezebox Connect",
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy",
-	  "version": "1.0.1",
+      "version": "2.0",
       "required": true,
       "oauth": false,
       "primary": true
@@ -19,20 +19,28 @@
   ],
   "drivers": [
     {
+      "id": "add0671c-f513-4ff8-9dcf-c4e463880b53",
+      "name": "Squeezebox Server",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-server.groovy",
+      "required": true,
+      "version": "2.0"
+    },
+    {
       "id": "da889e2b-df7d-41d2-8ee3-ab6f0570b014",
       "name": "Squeezebox Player",
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy",
-	  "version": "1.0",
-      "required": true
+      "required": true,
+      "version": "2.0"
     },
     {
       "id": "974932f7-65b1-4f99-a56b-4ee3d3265f5a",
       "name": "Squeezebox Player Child Switch",
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player-child-switch.groovy",
-	  "version": "1.0",
-      "required": true
+      "required": true,
+      "version": "2.0"
     }
   ]
 }
