@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - V2.1 - Add Switch capability to enable/disable communication with server
  * 26/09/2021 - v2.0 - Initial Implementation
  */
 metadata {
@@ -26,6 +27,7 @@ metadata {
   ) {
     capability "Initialize"
     capability "Telnet"
+    capability "Switch"
   }
 }
 
@@ -54,10 +56,21 @@ def initialize() {
       sendLogin()
     }
     sendSubscribe()
+    setConnected(true)
   } catch (ConnectException ex) {
     log.error("Unable to connect to CLI (will reattempt in 1 minute): ${ex.getMessage()}")
     runIn(60, "initialize")
+    setConnected(false)
   }
+}
+
+def on() {
+  initialize()
+}
+
+def off() {
+  telnetClose()
+  setConnected(false)
 }
 
 def parse(message) {
@@ -76,19 +89,33 @@ def parse(message) {
 def telnetStatus(message) {
   log.error "CLI Connection Failure (${parent.isPasswordProtected() ? "check username/password correct; ": ""}attempting to reconnect): ${message}"
   runIn(10, "initialize")
+  setConnected(false)
 }
 
 def sendMsg(message) {
-  log "CLI Send: ${message}"
+  if (state.connected) {
+    log "CLI Send: ${message}"
+    send message
+  } else {
+    log.warn "Cannot send message while disconnected, connect using initialise() or on()"
+  }
+}
+
+private send(message) {
   sendHubCommand new hubitat.device.HubAction(message, hubitat.device.Protocol.TELNET)
 }
 
 private sendLogin() {
   log "CLI Login (username: ${parent.username})"
-  sendMsg("login ${parent.username} ${parent.password}")
+  send("login ${parent.username} ${parent.password}")
 }
 
 private sendSubscribe() {
   log "Start CLI subscription"
-  sendMsg("subscribe playlist,prefset,sync")
+  send("subscribe playlist,prefset,sync")
+}
+
+private setConnected(connected) {
+  state.connected = connected
+  sendEvent(name: "switch", value: connected ? "on" : "off", display: true)
 }

@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v2.0.2 - Fix bugs where power, syncGroup not updated
  * 26/09/2021 - v2.0.1 - Fix bug where All Alarms child switch was not updating
  * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
@@ -131,6 +132,9 @@ def processMessage(String[] msg) {
   def command = msg[1]
 
   switch (command) {
+    case "power":
+      processPower(msg)
+      break
     case "status":
       processStatus(msg)
       break
@@ -164,6 +168,10 @@ private configureChildSwitch(createSwitch, switchDni, switchNameSuffix) {
   } else if (getChildDevice(switchDni)) {
     deleteChildDevice(switchDni)
   }
+}
+
+private processPower(msg) {
+  updatePower msg[2]
 }
 
 private processStatus(msg) {
@@ -333,7 +341,7 @@ private updateSyncGroup(syncMaster, syncSlaves) {
     ? "${syncMaster},${syncSlaves}"
       .tokenize(",")
       .collect { parent.getChildDeviceName(it) ?: "Unlinked Player" }
-    : null
+    : []
 
   state.syncGroup = syncGroup
   sendEvent(name: "syncGroup", value: syncGroup, displayed: true)
@@ -613,6 +621,7 @@ def unsyncAll() {
   def syncGroupIds = getPlayerIds(slaves)
   if (syncGroupIds) {
     getParent().unsyncAll(syncGroupIds)
+    statusRefresh()
   }
 }
 
