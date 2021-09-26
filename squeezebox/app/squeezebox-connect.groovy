@@ -15,6 +15,8 @@
  */
 
 /* ChangeLog:
+ * ??/??/???? - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
+ * 26/09/2021 - v1.0.1 - Fix bug causing players list to reset during app configuration
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 24/09/2021 - Set HTTP timeout to 60s
  * 24/09/2021 - Only skip 2 server requests before resetting busy flag
@@ -51,11 +53,6 @@ preferences {
     }
   }
   page(name: "optionsPage", title: "<h2>Options</h2>", nextPage: "playersPage", install: false, uninstall: false) {
-    section("<h3>Refresh Interval</h3>") {
-      paragraph("Number of seconds between each call to the Squeezebox Server to update players' status.")
-      paragraph("If you want to display player status from Hubitat or build rules that react quickly to changes in player status then use low values e.g. 2. If you are just sending commands to the players then higher values are recommended.")
-      input(name: "refreshSeconds", type: "enum", options: [2, 4, 10, 30, 60], required: true, title: "Players Status Refresh Interval")
-    }
     section("<h3>Security (optional)</h3>") {
       paragraph("If you have enabled password protection on the Squeezebox Server then you can enter the authentication details here.")
       input(name: "passwordProtection", type: "enum", options: ["Password Protection", "No Password Protection"], required: false, title: "Password Protection")
@@ -86,14 +83,14 @@ def playersPage() {
   state.auth = buildAuth()
     
   // send the server status request so that the connectedPlayers property can be populated from the response
-  getServerStatus()
+  queryServerStatus()
   
-  def playerNames = connectedPlayerNames()
+  def playerNames = connectedPlayerNames
   // once we have some players then stop refreshing the page so that we don't reset user selections on refresh
-  def playerRefreshInterval = playerNames?.isEmpty() ? 4 : null
+  Integer playerRefreshInterval = playerNames?.isEmpty() ? 4 : 0
     
   dynamicPage(name: "playersPage", refreshInterval: playerRefreshInterval) {
-    section("<h3>Connected Players</h3>") {
+    section("<h3>Connected Players${playerRefreshInterval ? " (discovering players, please wait...)" : ""}</h3>") {
       paragraph("Select the players you want to integrate to Hubitat:")
       input(name: "selectedPlayers", type: "enum", title: "Select Players (${playerNames.size()} found)", multiple: true, options: playerNames)
     }
@@ -113,7 +110,7 @@ def log(message) {
   }
 }
 
-def connectedPlayerNames() {
+def getConnectedPlayerNames() {
   state.connectedPlayers ? state.connectedPlayers?.collect( {it.name} ) : []
 }
 
@@ -134,27 +131,51 @@ def removeChildDevices(delete) {
 }
 
 def initialize() {
-  unschedule()
-  unsubscribe()
-  initializePlayers()
-  scheduleServerStatus()
+  initializeServer()
+  //initializePlayers()
 }
 
-def buildAuth() {
-    
-    if (passwordProtection != "Password Protection") {
-        return null
-    }
-    
-    def auth = "${username}:${password}"
-    auth.bytes.encodeBase64().toString()
+def isPasswordProtected() {
+  passwordProtection == "Password Protection"
 }
 
-def initializePlayers() {
-
-  def hub = location.hubs[0].id
+private buildAuth() {
+   
+  if (!isPasswordProtected()) {
+    return null
+  }
     
-  def serverHostAddress = "${serverIP}:${serverPort}"
+  def auth = "${username}:${password}"
+  auth.bytes.encodeBase64().toString()
+}
+
+private getServerDni() {
+  state.serverUuid
+}
+
+private getServer() {
+  getChildDevice(serverDni)
+}
+
+private initializeServer() {
+  
+  if (!server) {
+    queryCliPort()
+    runIn(2, "createServer")
+  }
+}
+
+private createServer() {
+
+  addChildDevice(
+      "xap",
+      "Squeezebox Server",
+      serverDni,
+      ["name": "Squeezebox Server", label: "Squeezebox Server"]
+    )
+}
+
+private initializePlayers() {
     
   // build selected and unselected lists by comparing the selected names to the connectedPlayers state property
   def selected = state.connectedPlayers?.findAll { selectedPlayers.contains(it.name) }
@@ -162,54 +183,39 @@ def initializePlayers() {
 
   // add devices for players that have been newly selected
   selected?.each {
-    def player = getChildDevice(it.mac)
+    def player = getChildDevice(it.id)
     if (!player) {
       def prefixedPlayerName = deviceNamePrefix ? "${deviceNamePrefix}${it.name}" : it.name
       def playerName = deviceNameSuffix ? "${prefixedPlayerName}${deviceNameSuffix}" : prefixedPlayerName
 
-      log "Add child device [${playerName} > ${it.mac}]"
+      log "Add child device [${playerName} > ${it.id}]"
 
       player = addChildDevice(
         "xap", 
         "Squeezebox Player", 
-        it.mac, // use the MAC address as the DNI to allow easy retrieval of player devices based on ID (MAC) returned by Squeezebox Server
-        hub,
+        it.id, // use the ID as the DNI to allow easy retrieval of player devices based on ID returned by Squeezebox Server
         ["name": playerName, "label": playerName]
       )
     }
     // always configure the player in case the server settings have changed
-    player.configure(serverHostAddress, it.mac, state.auth, createAlarmsSwitchPlayers?.contains(it.name), createPowerSwitchPlayers?.contains(it.name))
+    player.configure(it.id, createAlarmsSwitchPlayers?.contains(it.name), createPowerSwitchPlayers?.contains(it.name))
     // refresh the player to initialise state
     player.refresh()
   }
-    // delete any child devices for players that are no longer selected
+  
+  // delete any child devices for players that are no longer selected
   unselected?.each {
-    def player = getChildDevice(it.mac)
+    def player = getChildDevice(it.id)
     if (player) {
 
-      log "Delete child device [${player.name} > ${it.mac}]"
+      log "Delete child device [${player.name} > ${it.id}]"
 
-      deleteChildDevice(it.mac)
+      deleteChildDevice(it.id)
     }
   }
 }
 
-def scheduleServerStatus() {
-  int refreshSecondsInt = refreshSeconds.toInteger()
-
-  if (refreshSecondsInt < 60) {
-    log "Scheduling refresh every ${refreshSecondsInt} seconds"
-    schedule("${Math.round(Math.random() * refreshSecondsInt)}/${refreshSecondsInt} * * ? * * *", "getServerStatus")
-  } else {
-    log "Scheduling refresh every minute"
-    runEvery1Minute("getServerStatus")
-  }
-
-  // remove busy indicator in case rescheduling occurred whilst waiting for response
-  unsetBusy()
-}
-
-def processJsonMessage(msg) {
+private processJsonMessage(msg) {
 
   log "Squeezebox Connect Received [${msg.params[0]}]: ${msg}"
 
@@ -218,15 +224,21 @@ def processJsonMessage(msg) {
     // if no playerId in message params then it must be a general server message
     processServerMessage(msg)
   } else {
-    // otherwise retrieve the child device via the player's MAC address and pass the message to it for processing
-    def player = getChildDevice(playerId)
-    if (player) {
-      player.processJsonMessage(msg)
-    }
+    log "Ignoring player message: ${msg}"
   }
 }
 
-def processServerMessage(msg) {
+private queryServerStatus() {
+
+  executeCommand(["", ["serverstatus", 0, 99]])
+}
+
+private queryCliPort() {
+  
+  executeCommand(["", ["pref", "plugin.cli:cliport", "?"]])
+}
+
+private processServerMessage(msg) {
 
   // extract the server command from the message
   def command = msg.params[1][0]
@@ -235,99 +247,76 @@ def processServerMessage(msg) {
   switch (command) {
     case "serverstatus":
       processServerStatus(msg)
+      break
+    case "pref":
+      processCliPort(msg)
+      break
   }
 }
 
-def processServerStatus(msg) {
+private processServerStatus(msg) {
 
-  // extract the player name, ID (MAC) and power state for all players connected to Squeezebox Server
+  // extract the player ID and name for all players connected to Squeezebox Server
   def connectedPlayers = msg.result.players_loop.collect {[
     name: it.name,
-    mac: it.playerid,
-    power: it.power
+    id: it.playerid
   ]}
 
+  // hold the server UUID in state
+  state.serverUuid = msg.result.uuid
   // hold the currently connected players in state
   state.connectedPlayers = connectedPlayers
-   
-  // update the player devices
-  updatePlayers()
 }
 
-private setBusy() {
+private processCliPort(msg) {
   
-  state.busy = true
-}
-
-private unsetBusy() {
-  
-  state.remove("busy")
-  state.remove("skipped")
-}
-
-private getServerStatus() {
-
-  // very loose sync mechanism, doesn't guarantee no race conditions but should stop requests building up if there's a connection issue
-  if (state.busy) {
-    log.warn("Skipping request to refresh server status as still waiting on previous request. Hub network IO could be busy. If this occurs often then check network connectivity between HE Hub and LMS Server or consider increasing player refresh interval.")
-    state.skipped = state.skipped ? state.skipped + 1 : 1
-    if (state.skipped == 2) {
-      log.warn("Skipped 2 requests. Resetting busy status to allow server status refresh on next attempt.")
-      unsetBusy()
-    }
+  if (msg.params[1][1] == "plugin.cli:cliport") {
+    int port = Integer.parseInt(msg.result._p2)
+    
+    log "Detected CLI port as ${port}"
+    
+    state.cliPort = port
+    
   } else {
-    setBusy()
-    // instructs Squeezebox Server to give high level status info on all connected players
-    executeCommand(["", ["serverstatus", 0, 99]])
-  }
-}
-
-def updatePlayers() {
-
-  // iterate over connected players to update their status
-  state.connectedPlayers?.each {
-      
-    // look to see if we have a device for the player
-    def player = getChildDevice(it.mac)
-
-    // if we have then, if it is switched on (or its power status has changed), get detailed status information to update it with;
-    // otherwise, just update its power state to save spamming the server with constant requests for updates for players that aren't even switched on
-    if (player && (it.power == 1 || player.updatePower(it.power))) {
-      if (player.isExcluded()) {
-        log "Not refreshing player excluded from polling: ${player.name}"
-      } else if (player.isDisabled()) {
-        log "Not refreshing disabled player device: ${player.name}"
-      } else {
-        player.refresh()
-      }
-    }
+    log.warn("Unexpected pref message: ${msg}")
   }
 }
 
 /****************************
  * Methods for Child Devices *
  ****************************/
-
-def getChildDeviceName(mac) {
-  getChildDevice(mac)?.name
+def getServerCliPort() {
+  state.cliPort
 }
 
-def getChildDeviceMac(name) {
+def getServerUsername() {
+  username
+}
+
+def getServerPassword() {
+  password
+}
+
+private getChildDeviceName(id) {
+  getChildDevice(id)?.name
+}
+
+private getChildDeviceId(name) {
   def trimmedName = name.trim()
   def result = getChildDevices().findResult {it.name == trimmedName ? it.deviceNetworkId : null} 
   result ? result : getChildDevice(trimmedName)?.deviceNetworkId
 }
 
-def unsyncAll(playerMacs) {
-  log.debug "unsyncAll(${playerMacs})"
-  playerMacs?.each { getChildDevice(it)?.unsync() }
+def unsyncAll(playerIds) {
+  log.debug "unsyncAll(${playerIds})"
+  playerIds?.each { getChildDevice(it)?.unsync() }
 }
 
 def transferPlaylist(destination, tempPlaylist, time) {
   log.debug "transferPlaylist(\"${destination}\", \"${tempPlaylist}\", ${time})"
 
-  def destinationMac = getChildDeviceMac(destination)
-  def destinationPlayer = getChildDevice(destinationMac)
+  def destinationId = getChildDeviceId(destination)
+  def destinationPlayer = getChildDevice(destinationId)
     
   if (destinationPlayer) {
     destinationPlayer.resumeTempPlaylistAtTime(tempPlaylist, time)
@@ -342,7 +331,7 @@ def transferPlaylist(destination, tempPlaylist, time) {
  * Utility Methods *
  *******************/
  
-def executeCommand(params) {
+private executeCommand(params) {
 
   log "Squeezebox Connect Send: ${params}"
 
@@ -365,7 +354,7 @@ def executeCommand(params) {
 }
 
 // build the JSON content for the Squeezebox Server request
-def buildJsonRequest(params) {
+private buildJsonRequest(params) {
  
   def request = [
     id: 1,
@@ -381,8 +370,6 @@ def buildJsonRequest(params) {
 // receive the Squeezebox Server response and extract the JSON
 def receiveHttpResponse(response, data) {
 
-  try {
-
     if (response.status == 200) {
 
       def json = response.json
@@ -395,8 +382,4 @@ def receiveHttpResponse(response, data) {
     } else {
       log.warn "Received error response [${response.status}] : ${response.errorMessage}"
     }
-
-  } finally {
-    unsetBusy()
-  }
 }
