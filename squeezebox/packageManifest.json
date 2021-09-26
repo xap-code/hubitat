@@ -11,7 +11,7 @@
       "name": "Squeezebox Connect",
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy",
-	  "version": "1.0",
+	  "version": "1.0.1",
       "required": true,
       "oauth": false,
       "primary": true
