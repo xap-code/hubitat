@@ -49,7 +49,7 @@ def initialize() {
 
   try {
     telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
-    log.info "CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
+    log.info "Squeezebox CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
     if (parent.isPasswordProtected()) {
       sendLogin()
     }
