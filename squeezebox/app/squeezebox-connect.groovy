@@ -285,6 +285,15 @@ private processCliPort(msg) {
 /****************************
  * Methods for Child Devices *
  ****************************/
+def playerMessageReceived(data) {
+
+  def player = getChildDevice(data[0])
+
+  if (!player) {
+    log "Ignoring message for unregistered player: $data"
+  }
+}
+
 def getServerCliPort() {
   state.cliPort
 }
@@ -308,12 +317,12 @@ private getChildDeviceId(name) {
 }
 
 def unsyncAll(playerIds) {
-  log.debug "unsyncAll(${playerIds})"
+  log "unsyncAll(${playerIds})"
   playerIds?.each { getChildDevice(it)?.unsync() }
 }
 
 def transferPlaylist(destination, tempPlaylist, time) {
-  log.debug "transferPlaylist(\"${destination}\", \"${tempPlaylist}\", ${time})"
+  log "transferPlaylist(\"${destination}\", \"${tempPlaylist}\", ${time})"
 
   def destinationId = getChildDeviceId(destination)
   def destinationPlayer = getChildDevice(destinationId)

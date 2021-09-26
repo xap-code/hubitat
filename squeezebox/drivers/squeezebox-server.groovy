@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * ??/??/???? - v1.0 - Initial Implementation
+ * 26/09/2021 - v1.0 - Initial Implementation
  */
 metadata {
   definition (
@@ -50,7 +50,9 @@ def initialize() {
   try {
     telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
     log.info "CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
-    // TODO Login
+    if (parent.isPasswordProtected()) {
+      sendLogin()
+    }
     sendSubscribe()
   } catch (ConnectException ex) {
     log.error("Unable to connect to CLI (will reattempt in 1 minute): ${ex.getMessage()}")
@@ -65,19 +67,25 @@ def parse(message) {
   // assumes that player IDs are always MAC addresses
   if (decoded[0] =~ /^(?i)([0-9a-f]{2}:){5}[0-9a-f]{2}$/) {
     log "Received player message: ${decoded}"
+    parent.playerMessageReceived(decoded)
   } else {
     log "Ignoring non-player message: ${decoded}"
   }
 }
 
 def telnetStatus(message) {
-  log.error "CLI Connection Failure (attempting to reconnect): ${message}"
-  runIn(5, "initialize")
+  log.error "CLI Connection Failure (${parent.isPasswordProtected() ? "check username/password correct; ": ""}attempting to reconnect): ${message}"
+  runIn(10, "initialize")
 }
 
 def sendMsg(message) {
   log "CLI Send: ${message}"
   sendHubCommand new hubitat.device.HubAction(message, hubitat.device.Protocol.TELNET)
+}
+
+private sendLogin() {
+  log "CLI Login (username: ${parent.username})"
+  sendMsg("login ${parent.username} ${parent.password}")
 }
 
 private sendSubscribe() {
