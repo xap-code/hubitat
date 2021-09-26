@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - V2.1.1 - Unschedule when switching off() to prevent automatic reconnection
  * 26/09/2021 - V2.1 - Add Switch capability to enable/disable communication with server
  * 26/09/2021 - v2.0 - Initial Implementation
  */
@@ -69,6 +70,7 @@ def on() {
 }
 
 def off() {
+  unschedule()
   telnetClose()
   setConnected(false)
 }

@@ -24,7 +24,7 @@
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-server.groovy",
       "required": true,
-      "version": "2.1"
+      "version": "2.1.1"
     },
     {
       "id": "da889e2b-df7d-41d2-8ee3-ab6f0570b014",
