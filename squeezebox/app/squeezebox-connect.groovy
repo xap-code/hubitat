@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * ??/??/???? - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
+ * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 26/09/2021 - v1.0.1 - Fix bug causing players list to reset during app configuration
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 24/09/2021 - Set HTTP timeout to 60s

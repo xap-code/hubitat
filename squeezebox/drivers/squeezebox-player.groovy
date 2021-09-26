@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * ??/??/???? - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
+ * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 25/09/2021 - Use @Field for constant lists
  * 24/09/2021 - Reformat indentation
@@ -77,7 +77,6 @@ metadata {
     command "playTrackAtVolume", ["STRING","NUMBER"]
     command "repeat", [REPEAT_MODE]
     command "shuffle", [SHUFFLE_MOE]
-    command "speakArtistAlbums", ["STRING"]
     command "speakCurrentTrack"
     command "sync", ["STRING"]
     command "transferPlaylist", ["STRING"]
@@ -98,6 +97,14 @@ def log(message) {
   if (getParent().debugLogging) {
     log.debug message
   }
+}
+
+def installed() {
+  initialize()
+}
+
+def initialize() {
+  refresh()
 }
 
 def getAlarmsSwitchDni() {
@@ -137,6 +144,10 @@ def processMessage(String[] msg) {
       break
     case "prefset":
       processPrefset(msg)
+      break
+    case "sync":
+      processSync(msg)
+      break
     default:
       log "Ignored player message: ${msg}"
   }
@@ -164,11 +175,11 @@ private processStatus(msg) {
   ifPresent(values, "playlist repeat", "updateRepeat")
   ifPresent(values, "playlist shuffle", "updateShuffle")
 
-  updateTrackUri(values.get("url"))
-  updateSyncGroup(values.get("sync_master"), values.get("sync_slaves"))
+  updateTrackData(values.get("title"), values.get("artist"), values.get("album"), values.get("url"))
 
-  String trackDescription = values.get("artist") ? "${values.get("title")} by ${values.get("artist")}" : values.get("title")
-  updateTrackDescription(trackDescription)
+  updateTrackDescription(values.get("title"), values.get("artist"))
+
+  updateSyncGroup(values.get("sync_master"), values.get("sync_slaves"))
 }
 
 private processTime(msg) {
@@ -201,8 +212,8 @@ private processPlaylist(msg) {
       break
     
     case "clear":
-      updateTrackUri(null)
-      updateTrackDescription(null)
+      updateTrackData(null, null, null, null)
+      updateTrackDescription(null, null)
       break
   } 
 }
@@ -219,8 +230,20 @@ private processPrefset(msg) {
       case "power":
         updatePower(msg[4])
         break
+
+      case "mute":
+        updateMuted(msg[4])
+        break
+
+      case "syncgroupid":
+        statusRefresh()
+        break
     }
   }
+}
+
+private processSync(msg) {
+  statusRefresh()
 }
 
 private updatePower(onOff) {
@@ -245,6 +268,11 @@ private updatePower(onOff) {
 private updateVolume(volume) {
   String absVolume = Math.abs(Integer.valueOf(volume)).toString()
   sendEvent(name: "level", value: absVolume, displayed: true)
+  sendEvent(name: "mute", value: volume.startsWith("-") ? "muted" : "unmuted")
+}
+
+private updateMuted(muted) {
+  sendEvent(name: "mute", value: muted == "1" ? "muted" : "unmuted")
 }
 
 private updatePlayPause(playpause) {
@@ -274,11 +302,21 @@ private updateShuffle(shuffle) {
   sendEvent(name: "shuffle", value: SHUFFLE_MODE[Integer.valueOf(shuffle)], displayed: true)
 }
 
-private updateTrackUri(trackUri) {
-  sendEvent(name: "trackUri", value: trackUri, displayed: true)
+private updateTrackData(title, artist, album, uri) {
+
+  trackData = uri ? new groovy.json.JsonBuilder([
+    "title": title,
+    "artist": artist,
+    "album": album,
+    "image": "http://${parent.serverIP}:${parent.serverPort}/music/current/cover.jpg?player=${device.deviceNetworkId}",
+    "uri": uri
+  ]) : "{}"
+
+  sendEvent(name: "trackData", value: trackData, displayed: true)
 }
 
-private updateTrackDescription(trackDescription) {
+private updateTrackDescription(title, artist) {
+  String trackDescription = artist ? "${title} by ${artist}" : title
   state.trackDescription = trackDescription
   sendEvent(name: "trackDescription", value: trackDescription, displayed: true)
 }
@@ -290,7 +328,7 @@ private updateSyncGroup(syncMaster, syncSlaves) {
   def syncGroup = syncMaster && syncSlaves
     ? "${syncMaster},${syncSlaves}"
       .tokenize(",")
-      .collect { parent.getChildDeviceName(it) }
+      .collect { parent.getChildDeviceName(it) ?: "Unlinked Player" }
     : null
 
   state.syncGroup = syncGroup
@@ -634,11 +672,6 @@ def playSong(search) {
   runIn(3, checkSongSuccess)
 }
 
-def speakArtistAlbums(artist) {
-  log "speakArtistAlbums(\"${artist}\")"
-  sendCommand(["search", 0, 2, "term:${artist}"], { resp -> getArtistForListAlbums(artist, resp) })
-}
-
 private announce(text) {
   if (state.status == "playing") {
     playTextAndResume(text)
@@ -657,54 +690,6 @@ def speakCurrentTrack() {
     }
   } else {
     announce("There is no track.")
-  }
-}
-
-private getArtistForListAlbums(artistSearch, response) {
-    
-  def artists = response?.data?.result?.contributors_loop
-    
-  switch (artists?.size()) {
-    case null:
-    case 0:
-      announce("Sorry, I couldn't find any artists matching ${artistSearch}. Please try providing less of the artist name.")
-      break
-    case 1:
-      listArtistAlbums(artists.first())
-      break
-    default:
-      def exactArtist = artists.find { it.contributor.equalsIgnoreCase(artistSearch.trim()) }
-      if (exactArtist) {
-        listArtistAlbums(exactArtist)
-      } else {
-        def artistNames = artists.collect({ it.contributor }).join(", ")
-        announce("I found multiple matching artists: ${artistNames}. Please try providing more of the artist name.")
-      }
-  }
-}
-
-private listArtistAlbums(artist) {
-   def artistName = artist.contributor
-   def artistId = artist.contributor_id
-   sendCommand(["albums", 0, -1, "artist_id:${artistId}"], { resp -> listAlbums(artistName, resp) })
-}
-
-private listAlbums(artistName, response) {
-  
-  def albums = response?.data?.result?.albums_loop?.collect { it.album }
-    
-  switch (albums?.size()) {
-    case null:
-    case 0:
-      announce("Sorry, I couldn't find any albums for ${artistName}.")
-      break
-    case 1:
-      announce("I found one album for ${artistName}: ${albums.first()}")
-      break
-    default:
-      def lastAlbum = albums.pop() 
-      def albumList = "${albums.toSorted().join(", ")} and ${lastAlbum}"
-      announce("I found ${albums.size()} albums for ${artistName}: ${albumList}.")
   }
 }
 
