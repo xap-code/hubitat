@@ -46,6 +46,3 @@ repeat(repeat)
 shuffle(shuffle)
 - Sets the player shuffle mode if parameter is specified, otherwise toggles the shuffle mode if no parameter is specified.
 	valid values are: "off", "song", "album"
-	
-speakArtistAlbums(artist)
-- Searches for an artist based on the provided search text and lists all their albums in the library via text to speech on the player.
