@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - V2.1.2 - Add generic Actuator, Sensor capabilities
  * 26/09/2021 - V2.1.1 - Unschedule when switching off() to prevent automatic reconnection
  * 26/09/2021 - V2.1 - Add Switch capability to enable/disable communication with server
  * 26/09/2021 - v2.0 - Initial Implementation
@@ -26,9 +27,11 @@ metadata {
     author: "Ben Deitch",
     importUrl: "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-server.groovy"
   ) {
+    capability "Actuator"
     capability "Initialize"
-    capability "Telnet"
+	capability "Sensor"
     capability "Switch"
+    capability "Telnet"
   }
 }
 

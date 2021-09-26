@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v2.0.4 - Remove unused attributes
  * 26/09/2021 - v2.0.3 - Correct log message
  * 26/09/2021 - v2.0.2 - Fix bugs where power, syncGroup not updated
  * 26/09/2021 - v2.0.1 - Fix bug where All Alarms child switch was not updating
@@ -60,9 +61,7 @@ metadata {
     capability "Speech Synthesis"
     capability "Switch"
 
-    attribute "playerMAC", "STRING"
     attribute "repeat", "ENUM", REPEAT_MODE
-    attribute "serverHostAddress", "STRING"
     attribute "shuffle", "ENUM", SHUFFLE_MODE
     attribute "syncGroup", "STRING"
     
@@ -263,7 +262,7 @@ private updatePower(onOff) {
 
   boolean isOn = String.valueOf(onOff) == "1";
   String onOffString = isOn ? "on" : "off"
-  String current = device.currentValue("switch")
+  String current = attribute("switch")
 
   def powerSwitch = getChildDevice(powerSwitchDni)
   powerSwitch?.update(isOn)
@@ -292,19 +291,19 @@ private updatePlayPause(playpause) {
 
   switch (playpause) {
     case "play":
-      state.status = "playing"
+      status = "playing"
       break
     case "pause":
-      state.status = "paused"
+      status = "paused"
       break
     case "stop":
-      state.status = "stopped"
+      status = "stopped"
       break
     default:
-      state.status = playpause
+      status = playpause
   }
 
-  sendEvent(name: "status", value: state.status, displayed: true)
+  sendEvent(name: "status", value: status, displayed: true)
 }
 
 private updateRepeat(repeat) {
@@ -317,7 +316,7 @@ private updateShuffle(shuffle) {
 
 private updateTrackData(title, artist, album, uri) {
 
-  trackData = uri ? new groovy.json.JsonBuilder([
+  trackData = uri ? json([
     "title": title,
     "artist": artist,
     "album": album,
@@ -330,7 +329,6 @@ private updateTrackData(title, artist, album, uri) {
 
 private updateTrackDescription(title, artist) {
   String trackDescription = artist ? "${title} by ${artist}" : title
-  state.trackDescription = trackDescription
   sendEvent(name: "trackDescription", value: trackDescription, displayed: true)
 }
 
@@ -342,9 +340,9 @@ private updateSyncGroup(syncMaster, syncSlaves) {
     ? "${syncMaster},${syncSlaves}"
       .tokenize(",")
       .collect { parent.getChildDeviceName(it) ?: "Unlinked Player" }
-    : []
+      .join(" & ")
+    : null
 
-  state.syncGroup = syncGroup
   sendEvent(name: "syncGroup", value: syncGroup, displayed: true)
 }
 
@@ -476,7 +474,7 @@ private clearCapturedTime() {
 
 private captureAndChangeVolume(volume) {
   if (volume != null) {
-    state.previousVolume = device.currentValue("level");
+    state.previousVolume = attribute("level");
     setVolume(volume)
   }
 }
@@ -509,7 +507,7 @@ def resumeTempPlaylistAtTime(tempPlaylist, time=null) {
 
 def resume() {
   log "resume()"
-  def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
+  def tempPlaylist = "tempplaylist_" + device.deviceNetworkId.replace(":", "")
   resumeTempPlaylistAtTime(tempPlaylist, state.trackTime)
   clearCapturedTime()
   restoreVolumeAndRefresh()
@@ -517,14 +515,14 @@ def resume() {
 
 def restore() {
   log "restore()"
-  def tempPlaylist = "tempplaylist_" + state.playerMAC.replace(":", "")
+  def tempPlaylist = "tempplaylist_" + device.deviceNetworkId.replace(":", "")
   sendCommand(["playlist", "preview", "cmd:stop"])
   restoreVolumeAndRefresh()
 }
 
 def playTrackAndResume(uri, duration, volume=null) {
   log "playTrackAndResume(\"${uri}\", ${duration}, ${volume})"
-  def wasPlaying = (state.status == 'playing')
+  def wasPlaying = (attribute("status") == 'playing')
   def delay = previewAndGetDelay(uri, duration, volume)
   if (wasPlaying) runIn(delay, resume)
 }
@@ -618,7 +616,7 @@ def unsync() {
 
 def unsyncAll() {
   log "unsyncAll()"
-  def slaves = state.syncGroup?.findAll { it != device.name }
+  def slaves = attribute("syncGroup")?.split(" & ").findAll { it != device.name }
   def syncGroupIds = getPlayerIds(slaves)
   if (syncGroupIds) {
     getParent().unsyncAll(syncGroupIds)
@@ -629,7 +627,7 @@ def unsyncAll() {
 //--- Playlist
 def transferPlaylist(destination) {
   log "transferPlaylist(\"${destination}\")"
-  def tempPlaylist = "tempplaylist_from_" + state.playerMAC.replace(":", "")
+  def tempPlaylist = "tempplaylist_from_" + device.deviceNetworkId.replace(":", "")
   sendCommand(["playlist", "save", tempPlaylist])
   captureTime()
   if (getParent().transferPlaylist(destination, tempPlaylist, state.trackTime)) {
@@ -656,7 +654,7 @@ def enableAlarms() {
 
 //--- Library Methods
 private checkSuccess(searchType) {
-  if (state.status != 'playing') {
+  if (attribute("status") != 'playing') {
       playTextAndRestore("Sorry, your search didn't return anything. Please try providing less of the ${searchType} name.")
   }
 }
@@ -692,7 +690,7 @@ def playSong(search) {
 }
 
 private announce(text) {
-  if (state.status == "playing") {
+  if (attribute("status") == "playing") {
     playTextAndResume(text)
   } else {
     playTextAndRestore(text)
@@ -701,11 +699,11 @@ private announce(text) {
 
 def speakCurrentTrack() {
   log "speakCurrentTrack()"
-  if (state.trackDescription) {
-    if (state.status == "playing") {
-      playTextAndResume("The track currently playing is ${state.trackDescription}")
+  if (attribute("trackDescription")) {
+    if (attribute("status") == "playing") {
+      playTextAndResume("The track currently playing is ${attribute("trackDescription")}")
     } else {
-      playTextAndRestore("The last track played was ${state.trackDescription}")
+      playTextAndRestore("The last track played was ${attribute("trackDescription")}")
     }
   } else {
     announce("There is no track.")
@@ -759,6 +757,14 @@ private tryConvertToIndex(value, lowerCaseValues) {
   def lowerCaseValue = String.valueOf(value).toLowerCase()
   def index = lowerCaseValues.indexOf(lowerCaseValue)
   index < 0 ? value : index
+}
+
+private json(obj) {
+  new groovy.json.JsonBuilder(obj)
+}
+
+private attribute(name) {
+  device.currentValue(name)
 }
 
 private ifPresent(tagValues, tag, action) {
