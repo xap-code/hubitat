@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v1.0.1 - Fix bug causing players list to reset during app configuration
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
  * 24/09/2021 - Set HTTP timeout to 60s
  * 24/09/2021 - Only skip 2 server requests before resetting busy flag
