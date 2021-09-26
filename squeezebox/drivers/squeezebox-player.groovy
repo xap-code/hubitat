@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v2.0.3 - Correct log message
  * 26/09/2021 - v2.0.2 - Fix bugs where power, syncGroup not updated
  * 26/09/2021 - v2.0.1 - Fix bug where All Alarms child switch was not updating
  * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
@@ -675,7 +676,7 @@ def checkArtistSuccess() {
 }
 
 def playArtist(search) {
-  log "playAlbum(\"${search}\")"
+  log "playArtist(\"${search}\")"
   sendCommand(["playlist", "loadtracks", "contributor.namesearch=${search}"])
   runIn(3, checkArtistSuccess)
 }

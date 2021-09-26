@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/09/2021 - v2.0.1 - Fix bug causing requests not to be URL encoded
  * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 26/09/2021 - v1.0.1 - Fix bug causing players list to reset during app configuration
  * 25/09/2021 - v1.0 - Integration into Hubitat Package Manager
@@ -285,7 +286,7 @@ private processCliPort(msg) {
  * Methods for Child Devices *
  ****************************/
 def sendPlayerCommand(player, params) {
-  String encoded = params.each { URLEncoder.encode String.valueOf(it) }.collect().join(" ")
+  String encoded = params.collect { URLEncoder.encode String.valueOf(it) }.join(" ")
   server.sendMsg "${player.device.deviceNetworkId} ${encoded}"
 }
 
