@@ -87,11 +87,7 @@ def playersPage() {
   
   def playerNames = connectedPlayerNames
   // once we have some players then stop refreshing the page so that we don't reset user selections on refresh
-<<<<<<< HEAD
-  Integer playerRefreshInterval = playerNames?.isEmpty() ? 4 : 0
-=======
-  def playerRefreshInterval = playerNames?.isEmpty() ? 4 : 0
->>>>>>> e58d202883bab34d644c9c3c82f2a6fed7a7e88e
+  int playerRefreshInterval = playerNames?.isEmpty() ? 4 : 0
     
   dynamicPage(name: "playersPage", refreshInterval: playerRefreshInterval) {
     section("<h3>Connected Players${playerRefreshInterval ? " (discovering players, please wait...)" : ""}</h3>") {
