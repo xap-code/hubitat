@@ -15,9 +15,10 @@
  */
 
 /* ChangeLog:
- * 26/09/2021 - V2.1.2 - Add generic Actuator, Sensor capabilities
- * 26/09/2021 - V2.1.1 - Unschedule when switching off() to prevent automatic reconnection
- * 26/09/2021 - V2.1 - Add Switch capability to enable/disable communication with server
+ * 27/09/2021 - v2.2 - Indicate connection status on app label
+ * 26/09/2021 - v2.1.2 - Add generic Actuator, Sensor capabilities
+ * 26/09/2021 - v2.1.1 - Unschedule when switching off() to prevent automatic reconnection
+ * 26/09/2021 - v2.1 - Add Switch capability to enable/disable communication with server
  * 26/09/2021 - v2.0 - Initial Implementation
  */
 metadata {
@@ -122,5 +123,6 @@ private sendSubscribe() {
 
 private setConnected(connected) {
   state.connected = connected
+  parent.setConnected(connected)
   sendEvent(name: "switch", value: connected ? "on" : "off", display: true)
 }

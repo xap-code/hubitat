@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 27/09/2021 - v2.1 - Indicate connection status on app label
  * 26/09/2021 - v2.0.1 - Fix bug causing requests not to be URL encoded
  * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
  * 26/09/2021 - v1.0.1 - Fix bug causing players list to reset during app configuration
@@ -310,6 +311,10 @@ def getServerUsername() {
 
 def getServerPassword() {
   password
+}
+
+def setConnected(connected) {
+  app.updateLabel(connected ? "Squeezebox Connect" : "Squeezebox Connect <span style='color:red'>(Server Disconnected)</span>")
 }
 
 private getChildDeviceName(id) {
