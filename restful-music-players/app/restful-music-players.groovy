@@ -3,15 +3,6 @@
  *
  *  Copyright 2017 Ben Deitch
  *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
- *
  */
 definition(
   name: "RESTful Music Players",
@@ -19,9 +10,7 @@ definition(
   author: "Ben Deitch",
   description: "Exposes a REST API that can be used to remotely control the main functions of music players.",
   category: "My Apps",
-  iconUrl: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn.png",
-  iconX2Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@2x.png",
-  iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@3x.png")
+  iconUrl: "",  iconX2Url: "",  iconX3Url: "")
 
 preferences {
 	page(name: "Select Players", install: false, uninstall: true, nextPage: "viewURL") {
@@ -239,9 +228,6 @@ def playerCommand() {
         break
       case "stop":
         player.stop()
-        player.shuffle("off")
-        player.repeat("off")
-        player.clearPlaylist()
         break
       case "mute":
         player.mute()
@@ -270,7 +256,9 @@ def playerCommand() {
       case "unsynchronise-all":
         player.unsyncAll()
         break
-      case "reset":
+      case "current":
+        player.speakCurrentTrack()
+        break
         
       default:
         log.debug "command not found: \"${command}\""
@@ -295,11 +283,14 @@ def synchronisePlayers() {
     
   if (players.size() > 1) {
       def master = players.head()
-      def slaves = players.tail().collect({ it.name }).join(",")
+      def slaves = players.tail()
+      def slaveNames = slaves.collect({ it.name }).join(",")
       
-      log.debug "Synchronising ${master.name} > ${slaves}"
+      log.debug "Synchronising ${master.name} > ${slaveNames}"
       
-      master.sync(slaves)
+      slaves.each { it.on() }
+      
+      master.sync(slaveNames)
   }
    
   render contentType: "text/plain", data: "OK"
@@ -334,8 +325,8 @@ def delayedSpeakArtistAlbums(data) {
 }
 
 private searchTo(playerMethod) {
+    
     def searchAndPlayer = getParam(params.searchAndPlayer)
-    log.debug searchAndPlayer
     def splitIndex = searchAndPlayer.lastIndexOf(" on ")
     if (splitIndex < 0) {
       return
@@ -348,26 +339,14 @@ private searchTo(playerMethod) {
     
     switch (playerMethod) {
       case "playAlbum":
-        if (player) {
-          player.shuffle("off")
-          player.playAlbum(search)
-        }
+        player?.playAlbum(search)
         break
       case "playArtist":
-        if (player) {
-          player.playArtist(search)
-          player.shuffle("song")
-        }
+        player?.playArtist(search)
         break
       case "playSong":
-        if (player) {
-          player.shuffle("off")
-          player.playSong(search)
-        }
+        player?.playSong(search)
         break
-      case "speakArtistAlbums":
-        def data = [playerId: player.deviceNetworkId, search: search]
-        runIn(2, delayedSpeakArtistAlbums, [data: data])
     }
 }
 
@@ -381,8 +360,4 @@ def searchToPlayArtist() {
 
 def searchToPlaySong() {
   searchTo("playSong")    
-}
-
-def searchToSpeakArtistAlbums() {
-  searchTo("speakArtistAlbums")
 }
