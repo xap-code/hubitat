@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 27/09/2021 - v2.0.6 - Handle 'playlist newsong' and 'newmetadata' to refresh track details
  * 26/09/2021 - v2.0.5 - Use state rather than attribute for syncGroup
  * 26/09/2021 - v2.0.4 - Remove unused attributes
  * 26/09/2021 - v2.0.3 - Correct log message
@@ -151,7 +152,10 @@ def processMessage(String[] msg) {
       processPrefset(msg)
       break
     case "sync":
-      processSync(msg)
+      statusRefresh()
+      break
+    case "newmetadata":
+      statusRefresh()
       break
     default:
       log "Ignored player message: ${msg}"
@@ -209,6 +213,9 @@ private processPlaylist(msg) {
     
     case "open":
       updatePlayPause("play")
+      break
+
+    case "newsong":
       statusRefresh()
       break
     
@@ -252,10 +259,6 @@ private processPrefset(msg) {
         break
     }
   }
-}
-
-private processSync(msg) {
-  statusRefresh()
 }
 
 private updatePower(onOff) {

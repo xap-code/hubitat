@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 27/09/2021 - v2.2.1 - Add 'newmetadata' to subscription to update track details when listening to stream
  * 27/09/2021 - v2.2 - Indicate connection status on app label
  * 26/09/2021 - v2.1.2 - Add generic Actuator, Sensor capabilities
  * 26/09/2021 - v2.1.1 - Unschedule when switching off() to prevent automatic reconnection
@@ -118,7 +119,7 @@ private sendLogin() {
 
 private sendSubscribe() {
   log "Start CLI subscription"
-  send("subscribe playlist,prefset,sync")
+  send("subscribe playlist,prefset,sync,newmetadata")
 }
 
 private setConnected(connected) {
