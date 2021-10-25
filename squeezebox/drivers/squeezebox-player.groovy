@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 25/10/2021 - v2.1 - Add support for AudioVolume capability
  * 27/09/2021 - v2.0.6 - Handle 'playlist newsong' and 'newmetadata' to refresh track details
  * 26/09/2021 - v2.0.5 - Use state rather than attribute for syncGroup
  * 26/09/2021 - v2.0.4 - Remove unused attributes
@@ -56,11 +57,12 @@ metadata {
     importUrl: "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy"
   ) {
     capability "Actuator"
-    capability "Audio Notification"
-    capability "Music Player"
+    capability "AudioNotification"
+    capability "AudioVolume"
+    capability "MusicPlayer"
     capability "Refresh"
     capability "Sensor"
-    capability "Speech Synthesis"
+    capability "SpeechSynthesis"
     capability "Switch"
 
     attribute "repeat", "ENUM", REPEAT_MODE
@@ -384,13 +386,28 @@ def off() {
 }
 
 //--- Volume
-private setVolume(volume) {
+private sendVolume(volume) {
   sendCommand(["mixer", "volume", volume])
 }
 
 def setLevel(level) {
   log "setLevel(${level})"
-  setVolume(level)
+  sendVolume(level)
+}
+
+def setVolume(volumeLevel) {
+  log "setVolume(${volumeLevel})"
+  sendVolume(volumeLevel)
+}
+
+def volumeDown() {
+  log "volumeDown()"
+  sendVolume("-5")
+}
+
+def volumeUp() {
+  log "volumeUp()"
+  sendVolume("+5")
 }
 
 def mute() {
