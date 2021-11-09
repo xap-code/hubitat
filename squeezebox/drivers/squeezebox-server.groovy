@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 09/11/2021 - v2.2.2 - Catch any Exception for connection retry
  * 27/09/2021 - v2.2.1 - Add 'newmetadata' to subscription to update track details when listening to stream
  * 27/09/2021 - v2.2 - Indicate connection status on app label
  * 26/09/2021 - v2.1.2 - Add generic Actuator, Sensor capabilities
@@ -52,10 +53,8 @@ def uninstalled() {
 }
 
 def initialize() {
-
-  telnetClose()
-
   try {
+    telnetClose()
     telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
     log.info "Squeezebox CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
     if (parent.isPasswordProtected()) {
@@ -63,10 +62,10 @@ def initialize() {
     }
     sendSubscribe()
     setConnected(true)
-  } catch (ConnectException ex) {
-    log.error("Unable to connect to CLI (will reattempt in 1 minute): ${ex.getMessage()}")
-    runIn(60, "initialize")
+  } catch (Exception ex) {
     setConnected(false)
+    runIn(60, "initialize")
+    log.error("Unable to connect to CLI (will reattempt in 1 minute): ${ex.getMessage()}")
   }
 }
 
