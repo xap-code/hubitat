@@ -22,7 +22,7 @@ definition(
   name: "GivEnergy Forecast Charge",
   namespace: "xap",
   author: "Ben Deitch",
-  description: "Uses Solcast to predict solar generation and adjust GivEnergy Battery target charge via local GivTCP service.",
+  description: "Uses solar forecast API to predict solar generation and adjust GivEnergy Battery target charge via local GivTCP service.",
   category: "", iconUrl: "", iconX2Url: "", iconX3Url: "")
 
 preferences {
