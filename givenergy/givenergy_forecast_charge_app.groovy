@@ -1,25 +1,48 @@
 /*
  * GivEnergy Forecast Charge
+ *
+ *  Copyright 2022 Ben Deitch
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
  */
 
+/* ChangeLog:
+ * 06/03/2022 - v0.1 - Initial implementation using forecast from Solcast
+ * 11/03/2022 - v0.2 - Add support for forecast from Forecast.Solar
+ */
 definition(
   name: "GivEnergy Forecast Charge",
   namespace: "xap",
   author: "Ben Deitch",
   description: "Uses Solcast to predict solar generation and adjust GivEnergy Battery target charge via local GivTCP service.",
-  category: "My Apps",
-  iconUrl: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn.png",
-  iconX2Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@2x.png",
-  iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment2-icn@3x.png")
+  category: "", iconUrl: "", iconX2Url: "", iconX3Url: "")
 
 preferences {
-  section("<h3>Solcast API</h3>") {
-    input name: "solcastResourceId", type: "string", required: true, title: "Solcast Resource ID"
-    input name: "solcastApiKey", type: "string", required: true, title: "Solcast API Key"
-  }
-  section("<h3>GivTCP</h3>") {
+  section("<h3>GivEnergy Battery</h3>") {
     input name: "givTcpAddress", type: "string", required: true, title: "GivTCP Service IP Address"
     input name: "givTcpPort", type: "number", required: true, title: "GivTCP Service Port"
+  }
+  section("<h3>Solar Forecast</h3>") {
+    input name: "forecastProvider", type: "enum", options: ["Solcast", "Forecast.Solar"], required: true, title: "Forecast Provider", submitOnChange: true
+    if (forecastProvider == 'Solcast') { 
+      input name: "solcastResourceId", type: "string", required: true, title: "Solcast Resource ID"
+      input name: "solcastApiKey", type: "string", required: true, title: "Solcast API Key"
+    }
+    if (forecastProvider == 'Forecast.Solar') {
+      input name: "latitude", type: "string", required: true, title: "Latitude"
+      input name: "longtitude", type: "string", required: true, title: "Longtitude"
+      input name: "declination", type: "string", required: true, title: "Declination (angle of roof)"
+      input name: "azimuth", type: "string", required: true, title: "Azimuth (direction of roof face)"
+      input name: "power", type: "string", required: true, title: "System Power (kW)"
+    }
   }
   section("<h3>Charge Thresholds</h3>") {
     input name: "setTime", type: "time", required: true, title: "Daily time to get forecast and set charge target"
@@ -31,6 +54,7 @@ preferences {
     }
     input name: "addThreshold", type: "button", title: "Add", width: 2
     input name: "removeThreshold", type: "button", title: "Remove", width: 1
+    input name: "defaultTargetCharge", type: "number", range: "1..100", required: true, title: "Default Target SoC% (used if no thresholds met)"
   }
   section("<h3>Other Settings</h3>") {
     input name: "debugLogging", type: "bool", title: "Enable/disable debug logging", defaultValue: false, required: false
@@ -89,9 +113,9 @@ def getTargetCharge(index) {
 }
 
 def log(message) {
-    if (debugLogging) {
-	    log.debug message
-    }
+  if (debugLogging) {
+    log.debug message
+  }
 }
 
 def installed() {
@@ -118,22 +142,27 @@ def scheduleSetChargeTarget() {
 
 def updateChargeTarget() {
   log "Update charge target"
-  queryForecast()
+  if (forecastProvider == 'Solcast') {
+    querySolcast()
+  }
+  if (forecastProvider == 'Forecast.Solar') {
+    queryForecastSolar()
+  }
 }
 
-def queryForecast() {
+def querySolcast() {
 
   def uri = "https://api.solcast.com.au/rooftop_sites/${solcastResourceId}/forecasts?format=json&hours=24"
   
-  log "GET forecast from ${uri}"
+  log "GET forecast from Solcast: ${uri}"
 
-  asynchttpGet "handleForecast", [
+  asynchttpGet "handleSolcast", [
     uri: uri,
     headers: ["Authorization": "Bearer ${solcastApiKey}"]
   ]
 }
 
-def handleForecast(response, data) {
+def handleSolcast(response, data) {
   
   def json = response.json
   
@@ -141,12 +170,41 @@ def handleForecast(response, data) {
   
   if (json?.forecasts) {
     def forecastEnergy = calculateDailyForecast(json.forecasts)
-    log.info "Today's solar PV generation forecast is ${forecastEnergy}Wh"
-    def chargeTarget = determineChargeTarget(forecastEnergy)
-    log.info "Set charge target to ${chargeTarget}%"
-    setChargeTarget(chargeTarget)
+    adjustToForecast(forecastEnergy)
   } else {
     log.warn "Unable to set charge target as query for forecast returned no data"
+  }
+}
+
+def queryForecastSolar() {
+
+  def uri = "https://api.forecast.solar/estimate/${latitude}/${longtitude}/${declination}/${azimuth}/${power}"
+  
+  log "GET forecast from Forecast.Solar: ${uri}"
+
+  asynchttpGet "handleForecastSolar", [ uri: uri ]
+}
+
+def handleForecastSolar(response, data) {
+  
+  def json = response.json
+  
+  log json
+  
+  if (json?.result) {
+    def forecastEnergy = chooseDailyForecast(json.result.watt_hours_day)
+    adjustToForecast(forecastEnergy)
+  } else {
+    log.warn "Unable to set charge target as query for forecast returned no data"
+  }
+}
+
+def adjustToForecast(forecastEnergy) {
+  log.info "Today's solar PV generation forecast is ${forecastEnergy}Wh"
+  def chargeTarget = determineChargeTarget(forecastEnergy)
+  if (chargeTarget >= 0) {
+    log.info "Set charge target to ${chargeTarget}%"
+    setChargeTarget(chargeTarget)
   }
 }
 
@@ -168,22 +226,29 @@ def calculateDailyForecast(forecasts) {
   .sum { it } * 1000
 }
 
+def chooseDailyForecast(days) {
+  
+  def today = new Date().format("yyyy-MM-dd")
+  
+  days[today]
+}
+
 def determineChargeTarget(forecastEnergy) {
   
   def highestEnergy = -1;
-  def highestCharge = -1;
+  def targetCharge = defaultTargetCharge;
   for (int threshold = 1; threshold <= thresholdCount; threshold++) {
     def thresholdEnergy = getForecastEnergy(threshold)
     if (forecastEnergy >= thresholdEnergy && thresholdEnergy > highestEnergy) {
       highestEnergy = thresholdEnergy
-      highestCharge = getTargetCharge(threshold)
+      targetCharge = getTargetCharge(threshold)
     }
   }
-  highestCharge
+  targetCharge
 }
 
 def setChargeTarget(chargeToPercent) {
-  
+
   def uri = "http://${givTcpAddress}:${givTcpPort}/setChargeTarget"
   def body = "{\"chargeToPercent\": \"${chargeToPercent}\"}"
 
@@ -203,16 +268,16 @@ def setChargeTarget(chargeToPercent) {
 
 def receiveChargeTargetResponse(response, data) {
 
-    if (response.status == 200) {
+  if (response.status == 200) {
 
-      def json = response.json
-      if (json) {
-        log.info json.result
-      } else {
-        log.warn "Received response that didn't contain any JSON"
-      }
-
+    def json = response.json
+    if (json) {
+      log.info json.result
     } else {
-      log.warn "Received error response [${response.status}] : ${response.errorMessage}"
+      log.warn "Received response that didn't contain any JSON"
     }
+
+  } else {
+    log.warn "Received error response [${response.status}] : ${response.errorMessage}"
+  }
 }
