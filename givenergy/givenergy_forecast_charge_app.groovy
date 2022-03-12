@@ -17,7 +17,9 @@
 /* ChangeLog:
  * 06/03/2022 - v0.1 - Initial implementation using forecast from Solcast
  * 11/03/2022 - v0.2 - Add support for forecast from Forecast.Solar
+ * 12/03/2022 - v0.3 - Improve error logging for failed requests and use default target if unable to get forecast
  */
+
 definition(
   name: "GivEnergy Forecast Charge",
   namespace: "xap",
@@ -154,25 +156,27 @@ def querySolcast() {
 
   def uri = "https://api.solcast.com.au/rooftop_sites/${solcastResourceId}/forecasts?format=json&hours=24"
   
-  log "GET forecast from Solcast: ${uri}"
+  log.info "Getting forecast data from Solcast"
+  log "GET: ${uri}"
 
   asynchttpGet "handleSolcast", [
     uri: uri,
-    headers: ["Authorization": "Bearer ${solcastApiKey}"]
+    headers: ["Authorization": "Bearer ${solcastApiKey}"],
+    timeout: 60
   ]
 }
 
 def handleSolcast(response, data) {
   
-  def json = response.json
+  def json = getResponseJson(response)
   
-  log json
+  log "Received JSON: ${json}"
   
   if (json?.forecasts) {
     def forecastEnergy = calculateDailyForecast(json.forecasts)
     adjustToForecast(forecastEnergy)
   } else {
-    log.warn "Unable to set charge target as query for forecast returned no data"
+    setDefaultTarget()
   }
 }
 
@@ -180,32 +184,44 @@ def queryForecastSolar() {
 
   def uri = "https://api.forecast.solar/estimate/${latitude}/${longtitude}/${declination}/${azimuth}/${power}"
   
-  log "GET forecast from Forecast.Solar: ${uri}"
+  log.info "Getting forecast data from Forecast.Solar"
+  log "GET: ${uri}"
 
-  asynchttpGet "handleForecastSolar", [ uri: uri ]
+  asynchttpGet "handleForecastSolar", [
+    uri: uri,
+    timeout: 60
+  ]
 }
 
 def handleForecastSolar(response, data) {
   
-  def json = response.json
+  def json = getResponseJson(response)
   
-  log json
+  log "Received JSON: ${json}"
   
   if (json?.result) {
     def forecastEnergy = chooseDailyForecast(json.result.watt_hours_day)
     adjustToForecast(forecastEnergy)
   } else {
-    log.warn "Unable to set charge target as query for forecast returned no data"
+    setDefaultTarget()
   }
 }
 
 def adjustToForecast(forecastEnergy) {
+
   log.info "Today's solar PV generation forecast is ${forecastEnergy}Wh"
+
   def chargeTarget = determineChargeTarget(forecastEnergy)
   if (chargeTarget >= 0) {
     log.info "Set charge target to ${chargeTarget}%"
     setChargeTarget(chargeTarget)
   }
+}
+
+def setDefaultTarget() {
+
+  log.warn "Unable to get solar forecast data. Using default charge target of ${defaultTargetCharge}%"
+  setChargeTarget(defaultTargetCharge)
 }
 
 def getForecastDate(forecast) {
@@ -227,9 +243,8 @@ def calculateDailyForecast(forecasts) {
 }
 
 def chooseDailyForecast(days) {
-  
+
   def today = new Date().format("yyyy-MM-dd")
-  
   days[today]
 }
 
@@ -252,7 +267,7 @@ def setChargeTarget(chargeToPercent) {
   def uri = "http://${givTcpAddress}:${givTcpPort}/setChargeTarget"
   def body = "{\"chargeToPercent\": \"${chargeToPercent}\"}"
 
-  log "POST to ${uri}: ${body}"
+  log "POST: ${uri} < ${body}"
   
   def postParams = [
     uri: uri,
@@ -265,18 +280,21 @@ def setChargeTarget(chargeToPercent) {
   asynchttpPost "receiveChargeTargetResponse", postParams
 }
 
-
 def receiveChargeTargetResponse(response, data) {
 
-  if (response.status == 200) {
+  def json = getResponseJson(response)
+  log.info json.result
+}
 
+private getResponseJson(response) {
+  
+  if (response.status == 200) {
     def json = response.json
     if (json) {
-      log.info json.result
+      json
     } else {
       log.warn "Received response that didn't contain any JSON"
     }
-
   } else {
     log.warn "Received error response [${response.status}] : ${response.errorMessage}"
   }
