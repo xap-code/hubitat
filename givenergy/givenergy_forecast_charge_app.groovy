@@ -18,6 +18,7 @@
  * 06/03/2022 - v0.1 - Initial implementation using forecast from Solcast
  * 11/03/2022 - v0.2 - Add support for forecast from Forecast.Solar
  * 12/03/2022 - v0.3 - Improve error logging for failed requests and use default target if unable to get forecast
+ * 15/03/2022 - v0.4 - Allow scenario weighting with Solcast to select between p10-p-p90 estimates
  */
 
 definition(
@@ -37,6 +38,7 @@ preferences {
     if (forecastProvider == 'Solcast') { 
       input name: "solcastResourceId", type: "string", required: true, title: "Solcast Resource ID"
       input name: "solcastApiKey", type: "string", required: true, title: "Solcast API Key"
+      input name: "weighting", type: "decimal", required: true, range: "-1..1", defaultValue: 0, title: "Scenario Weighting (from -1.0 to use low estimates, up to 1.0 to use high estimates; defaults to 0 to use normal estimates)"
     }
     if (forecastProvider == 'Forecast.Solar') {
       input name: "latitude", type: "string", required: true, title: "Latitude"
@@ -232,13 +234,24 @@ def getForecastPeriodHours(forecast) {
   Duration.parse(forecast.period).toMinutes() / 60.0
 }
 
+def getPeriodEstimate(forecast) {
+
+  if (weighting < 0) {
+    forecast.pv_estimate + weighting * (forecast.pv_estimate - forecast.pv_estimate10)
+  } else if (weighting > 0) {
+    forecast.pv_estimate + weighting * (forecast.pv_estimate90 - forecast.pv_estimate)
+  } else {
+    forecast.pv_estimate
+  }
+}
+
 def calculateDailyForecast(forecasts) {
 
   def today = new Date().date
 
   forecasts
   .findAll { getForecastDate(it) == today }
-  .collect { getForecastPeriodHours(it) * it.pv_estimate }
+  .collect { getForecastPeriodHours(it) * getPeriodEstimate(it) }
   .sum { it } * 1000
 }
 
