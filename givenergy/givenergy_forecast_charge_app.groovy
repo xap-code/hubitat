@@ -19,6 +19,8 @@
  * 11/03/2022 - v0.2 - Add support for forecast from Forecast.Solar
  * 12/03/2022 - v0.3 - Improve error logging for failed requests and use default target if unable to get forecast
  * 15/03/2022 - v0.4 - Allow scenario weighting with Solcast to select between p10-p-p90 estimates
+ * 16/03/2022 - v0.5 - Round Solcast forecast
+ * 22/03/2022 - v0.6 - Adjust charge start time based on charge target and set schedule based on earliest start time
  */
 
 definition(
@@ -32,6 +34,10 @@ preferences {
   section("<h3>GivEnergy Battery</h3>") {
     input name: "givTcpAddress", type: "string", required: true, title: "GivTCP Service IP Address"
     input name: "givTcpPort", type: "number", required: true, title: "GivTCP Service Port"
+    input name: "chargeStartTime", type: "time", required: true, title: "Earliest Charge Start Time", width: 5
+    input name: "chargeEndTime", type: "time", required: true, title: "Charge End Time", width: 4
+    input name: "batteryCapacity", type: "decimal", required: true, title: "Battery Capacity (kWh)", width: 5
+    input name: "batteryChargeRate", type: "decimal", required: true, title: "Battery Charge Rate (kWh)", width: 5
   }
   section("<h3>Solar Forecast</h3>") {
     input name: "forecastProvider", type: "enum", options: ["Solcast", "Forecast.Solar"], required: true, title: "Forecast Provider", submitOnChange: true
@@ -45,14 +51,13 @@ preferences {
       input name: "longtitude", type: "string", required: true, title: "Longtitude"
       input name: "declination", type: "string", required: true, title: "Declination (angle of roof)"
       input name: "azimuth", type: "string", required: true, title: "Azimuth (direction of roof face)"
-      input name: "power", type: "string", required: true, title: "System Power (kW)"
+      input name: "power", type: "string", required: true, title: "System Power (kWh)"
     }
   }
   section("<h3>Charge Thresholds</h3>") {
-    input name: "setTime", type: "time", required: true, title: "Daily time to get forecast and set charge target"
     paragraph("Define Charge Thresholds")
     (1..thresholdCount).each { 
-      input name: getForecastEnergyName(it), type: "number", required: true, title: "Daily Forecast (Wh)", width: 20
+      input name: getForecastEnergyName(it), type: "decimal", required: true, title: "Daily Forecast (kWh)", width: 20
       input name: getTargetChargeName(it), type: "number", range: "1..100", required: true, title: "Target SoC%", width: 20
       paragraph("")
     }
@@ -108,8 +113,8 @@ def getTargetChargeName(index) {
   "targetCharge_${index}"
 }
 
-def getForecastEnergy(index) {
-  app.getSetting(getForecastEnergyName(index))
+def getForecastEnergyWh(index) {
+  app.getSetting(getForecastEnergyName(index)) * 1000
 }
 
 def getTargetCharge(index) {
@@ -135,13 +140,20 @@ def updated() {
 
 def initialize() {
   unschedule()
-  scheduleSetChargeTarget()
+  scheduleUpdateChargeTarget()
   pruneThresholdSettings()
 }
 
-def scheduleSetChargeTarget() {
-  def time = toDateTime(setTime)
+def scheduleUpdateChargeTarget() {
+  def time = subtractMinutes(chargeStartTime, 5)
   schedule("0 ${time.minutes} ${time.hours} ? * *", updateChargeTarget)
+}
+
+def subtractMinutes(time, minutes) {
+  def cal=Calendar.instance
+  cal.setTime(toDateTime(time))
+  cal.add(Calendar.MINUTE, -minutes)
+  def calculatedStartTime=cal.time
 }
 
 def updateChargeTarget() {
@@ -216,14 +228,14 @@ def adjustToForecast(forecastEnergy) {
   def chargeTarget = determineChargeTarget(forecastEnergy)
   if (chargeTarget >= 0) {
     log.info "Set charge target to ${chargeTarget}%"
-    setChargeTarget(chargeTarget)
+    setChargeSlot(chargeTarget)
   }
 }
 
 def setDefaultTarget() {
 
   log.warn "Unable to get solar forecast data. Using default charge target of ${defaultTargetCharge}%"
-  setChargeTarget(defaultTargetCharge)
+  setChargeSlot(defaultTargetCharge)
 }
 
 def getForecastDate(forecast) {
@@ -249,10 +261,12 @@ def calculateDailyForecast(forecasts) {
 
   def today = new Date().date
 
-  forecasts
-  .findAll { getForecastDate(it) == today }
-  .collect { getForecastPeriodHours(it) * getPeriodEstimate(it) }
-  .sum { it } * 1000
+  Math.round(
+    forecasts
+    .findAll { getForecastDate(it) == today }
+    .collect { getForecastPeriodHours(it) * getPeriodEstimate(it) }
+    .sum { it } * 1000
+  )
 }
 
 def chooseDailyForecast(days) {
@@ -266,7 +280,7 @@ def determineChargeTarget(forecastEnergy) {
   def highestEnergy = -1;
   def targetCharge = defaultTargetCharge;
   for (int threshold = 1; threshold <= thresholdCount; threshold++) {
-    def thresholdEnergy = getForecastEnergy(threshold)
+    def thresholdEnergy = getForecastEnergyWh(threshold)
     if (forecastEnergy >= thresholdEnergy && thresholdEnergy > highestEnergy) {
       highestEnergy = thresholdEnergy
       targetCharge = getTargetCharge(threshold)
@@ -275,10 +289,29 @@ def determineChargeTarget(forecastEnergy) {
   targetCharge
 }
 
-def setChargeTarget(chargeToPercent) {
+def calculateChargeStartTime(chargeToPercent) {
 
-  def uri = "http://${givTcpAddress}:${givTcpPort}/setChargeTarget"
-  def body = "{\"chargeToPercent\": \"${chargeToPercent}\"}"
+  def chargeTargetkWh=batteryCapacity * chargeToPercent/100.0
+  def chargeTimeMinutes=(int) Math.ceil(chargeTargetkWh*1.05 / batteryChargeRate*60)
+  def calculatedStartTime=subtractMinutes(chargeEndTime, chargeTimeMinutes)
+
+  log "chargeToPercent=${chargeToPercent}, chargeTargetkWh=${chargeTargetkWh}, chargeTimeMinutes=${chargeTimeMinutes}, calculatedStartTime=${calculatedStartTime}"
+  
+  def startTime=toDateTime(chargeStartTime)
+  startTime.after(calculatedStartTime) ? startTime : calculatedStartTime
+}
+
+def toSlotTime(inputTime) {
+  def time = inputTime instanceof String ? toDateTime(inputTime) : inputTime
+  String.format("%02d%02d", time.hours, time.minutes)
+}
+
+def setChargeSlot(chargeToPercent) {
+
+  def chargeStart = toSlotTime(calculateChargeStartTime(chargeToPercent))
+  def chargeFinish = toSlotTime(chargeEndTime)
+  def uri = "http://${givTcpAddress}:${givTcpPort}/setChargeSlot1"
+  def body = "{\"start\": \"${chargeStart}\", \"finish\": \"${chargeFinish}\", \"chargeToPercent\": \"${chargeToPercent}\"}"
 
   log "POST: ${uri} < ${body}"
   
