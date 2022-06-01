@@ -14,7 +14,7 @@
       "required": true,
       "oauth": false,
       "primary": true,
-      "version": "2.1"
+      "version": "2.2"
     }
   ],
   "drivers": [
@@ -32,7 +32,7 @@
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy",
       "required": true,
-      "version": "2.1"
+      "version": "2.2"
     },
     {
       "id": "974932f7-65b1-4f99-a56b-4ee3d3265f5a",

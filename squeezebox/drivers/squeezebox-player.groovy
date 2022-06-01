@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 01/06/2022 - v2.2 - Update commands to better match Hubitat capability specifications. Fix bug where slave players not updating status correctly.
  * 25/10/2021 - v2.1 - Add support for AudioVolume capability
  * 27/09/2021 - v2.0.6 - Handle 'playlist newsong' and 'newmetadata' to refresh track details
  * 26/09/2021 - v2.0.5 - Use state rather than attribute for syncGroup
@@ -79,7 +80,6 @@ metadata {
     command "playArtist", ["STRING"]
     command "playFavorite", ["INTEGER"]
     command "playSong", ["STRING"]
-    command "playTrackAtVolume", ["STRING","NUMBER"]
     command "repeat", [REPEAT_MODE]
     command "shuffle", [SHUFFLE_MOE]
     command "speakCurrentTrack"
@@ -87,6 +87,9 @@ metadata {
     command "transferPlaylist", ["STRING"]
     command "unsync"
     command "unsyncAll"
+     // explicitly added for the AudioNotification capability as the MusicPlayer capability hides the commands that take volume
+    command "playText", ["STRING", "NUMBER"]
+    command "playTrack", ["STRING", "NUMBER"]
   }
 }
 
@@ -99,7 +102,7 @@ import groovy.transform.Field
 @Field static final List SHUFFLE_MODE = ["off", "song", "album"]
 
 def log(message) {
-  if (getParent().debugLogging) {
+  if (parent.debugLogging) {
     log.debug message
   }
 }
@@ -135,30 +138,36 @@ def processMessage(String[] msg) {
   def command = msg[1]
 
   switch (command) {
+
     case "power":
       processPower(msg)
       break
+
     case "status":
       processStatus(msg)
       break
+
     case "time":
       processTime(msg)
       break
+
     case "playlist":
       processPlaylist(msg)
       break
+
     case "playerpref":
       processPlayerpref(msg)
       break
+
     case "prefset":
       processPrefset(msg)
       break
+
     case "sync":
-      statusRefresh()
-      break
     case "newmetadata":
-      statusRefresh()
+      refreshStatus()
       break
+      
     default:
       log "Ignored player message: ${msg}"
   }
@@ -206,25 +215,32 @@ private processPlaylist(msg) {
   switch (msg[2]) {
 
     case "pause":
-      updatePlayPause(msg[3] == "1" ? "pause" : "play")
+      def playPause = msg[3] == "1" ? "pause" : "play"
+      updatePlayPause(playPause)
+      updateSlavesplayPauseIfMaster(playPause)
       break
 
     case "stop":
       updatePlayPause("stop")
-      break
-    
-    case "open":
-      updatePlayPause("play")
+      updateSlavesplayPauseIfMaster("stop")
       break
 
     case "newsong":
-      statusRefresh()
+      refreshStatus()
+      refreshSlavesStatusIfMaster()
+      break
+    
+    case "sync":
+      refreshStatus()
       break
     
     case "clear":
       updateTrackData(null, null, null, null)
       updateTrackDescription(null, null)
       break
+      
+    default:
+      log "Ignored playlist command: ${msg}"
   } 
 }
 
@@ -253,7 +269,7 @@ private processPrefset(msg) {
         break
 
       case "syncgroupid":
-        statusRefresh()
+        refreshStatus()
         break
 
       case "alarmsEnabled":
@@ -292,20 +308,24 @@ private updateMuted(muted) {
   sendEvent(name: "mute", value: muted == "1" ? "muted" : "unmuted")
 }
 
-private updatePlayPause(playpause) {
+private updatePlayPause(playPause) {
 
-  switch (playpause) {
+  switch (playPause) {
+    
     case "play":
       status = "playing"
       break
+    
     case "pause":
       status = "paused"
       break
+    
     case "stop":
       status = "stopped"
       break
+    
     default:
-      status = playpause
+      status = playPause
   }
 
   sendEvent(name: "status", value: status, displayed: true)
@@ -338,9 +358,6 @@ private updateTrackDescription(title, artist) {
 }
 
 private updateSyncGroup(syncMaster, syncSlaves) {
-
-  def parent = getParent()
-
   if (syncMaster && syncSlaves) {
     state.syncGroup = "${syncMaster},${syncSlaves}"
       .tokenize(",")
@@ -359,19 +376,19 @@ private updateAlarms(alarms) {
  * Commands *
  ************/
 
-private statusRefresh() {
+def refreshStatus() {
   sendCommand(["status", "-", 1, "tags:abclsu"]) 
 }
 
-private alarmsRefresh() {
+def refreshAlarms() {
   if (getChildDevice(alarmsSwitchDni)) {
     sendCommand(["playerpref", "alarmsEnabled", "?"]) 
   }
 }
 
 def refresh() {
-  statusRefresh()
-  alarmsRefresh()
+  refreshStatus()
+  refreshAlarms()
 }
 
 //--- Power
@@ -421,10 +438,19 @@ def unmute() {
 }
 
 //--- Playback
-private executePlayAndRefresh(uri) {
+private playUri(uri, volume=null) {
+  if (volume) {
+    setVolume(volume)
+  }
   sendCommand(["playlist", "play", uri])
 }
 
+private setUriAndRefresh(uri) {
+  sendCommand(["playlist", "resume", uri, "noplay:1"])
+  refreshStatus()
+}
+
+private 
 def play() {
   log "play()"
   sendCommand(["play"])
@@ -452,37 +478,29 @@ def previousTrack() {
 
 def setTrack(trackToSet) {
   log "setTrack(\"${trackToSet}\")"
-  sendCommand(["playlist", "stop", trackToSet])
-  stop()  
+  setUriAndRefresh(trackToSet)
 }
 
 def resumeTrack(trackToResume) {
   log "resumeTrack(\"${trackToResume}\")"
-  executePlayAndRefresh(trackToResume)
+  playUri(trackToResume)
 }
 
 def restoreTrack(trackToRestore) {
   log "restoreTrack(\"${trackToRestore}\")"
-  executePlayAndRefresh(trackToRestore)
+  setUriAndRefresh(trackToRestore)
 }
 
-def playTrack(trackToPlay) {
-  log "playTrack(\"${trackToPlay}\")"
-  executePlayAndRefresh(trackToPlay)
-}
-
-def playTrackAtVolume(uri, volume) {
-  log "playTrackAtVolume(\"${uri}\", ${volume})"
-  setVolume(volume)
-  executePlayAndRefresh(uri)
-}
-
-def playUri(uri) {
-  log "playUri(\"${uri}\")"
-  executePlayAndRefresh(uri)
+def playTrack(trackUri, volume=null) {
+  log "playTrack(\"${trackUri}\")"
+  playUri(trackUri, volume)
 }
 
 //--- resume/restore methods
+private getTempPlaylistName() {
+  "tempplaylist_" + device.deviceNetworkId.replace(":", "")
+}
+
 private captureTime() {
   sendCommand(["time", "?"])
 }
@@ -503,7 +521,6 @@ private clearCapturedVolume() {
 }
 
 private previewAndGetDelay(uri, duration, volume=null) {
-  captureTime()
   sendCommand(["playlist", "preview", "url:${uri}", "silent:1"])
   captureAndChangeVolume(volume)    
   return 2 + duration as int
@@ -517,39 +534,41 @@ private restoreVolumeAndRefresh() {
 }
 
 // this method is also used by the server when sending a playlist to this player
-def resumeTempPlaylistAtTime(tempPlaylist, time=null) {
-  sendCommand(["playlist", "resume", tempPlaylist, "wipePlaylist:1"])
+def resumeTempPlaylistAtTime(time=null) {
+  sendCommand(["playlist", "resume", tempPlaylistName, "wipePlaylist:1"])
   if (time) {
     sendCommand(["time", time])
   }
 }
 
+def restoreTempPlaylist() {
+  sendCommand(["playlist", "resume", tempPlaylistName, "wipePlaylist:1", "noplay:1"])
+}
+
 def resume() {
-  log "resume()"
-  def tempPlaylist = "tempplaylist_" + device.deviceNetworkId.replace(":", "")
-  resumeTempPlaylistAtTime(tempPlaylist, state.trackTime)
-  clearCapturedTime()
+  resumeTempPlaylistAtTime(state.trackTime)
   restoreVolumeAndRefresh()
+  clearCapturedTime()
 }
 
 def restore() {
-  log "restore()"
-  def tempPlaylist = "tempplaylist_" + device.deviceNetworkId.replace(":", "")
-  sendCommand(["playlist", "preview", "cmd:stop"])
+  restoreTempPlaylist()
   restoreVolumeAndRefresh()
 }
 
 def playTrackAndResume(uri, duration, volume=null) {
   log "playTrackAndResume(\"${uri}\", ${duration}, ${volume})"
   def wasPlaying = (attribute("status") == 'playing')
+  if (wasPlaying) captureTime()
   def delay = previewAndGetDelay(uri, duration, volume)
   if (wasPlaying) runIn(delay, resume)
 }
 
 def playTrackAndRestore(uri, duration, volume=null) {
   log "playTrackAndRestore(\"${uri}\", ${duration}, ${volume})"
+  def wasPlaying = (attribute("status") == 'playing')
   def delay = previewAndGetDelay(uri, duration, volume)
-  runIn(delay, restore)
+  if (wasPlaying) runIn(delay, restore)
 }
 
 //--- Favorites
@@ -567,11 +586,11 @@ def fav5() { playFavorite(5) }
 def fav6() { playFavorite(6) }
 
 //--- Speech
-private getTts(text) {
+private getTts(text, voice=null) {
   if (text) {
     text = text.replace("&", "and")
     // add a break to the end of the generated file, prevents text being repeated if LMS decides to loop?!?
-    def result = textToSpeech("${text}<break time='2s'/>")
+    def result = textToSpeech("${text}<break time='2s'/>", voice)
     // reduce the duration to account for the added break
     if (result) {
       result.duration -= 2
@@ -584,11 +603,11 @@ private getTts(text) {
   }
 }
 
-def playText(text) {
+def playText(text, volume=null) {
   log "playText(\"${text}\")"
   def tts = getTts(text)
   if (tts) {
-    executePlayAndRefresh(tts.uri)
+    playUri(tts.uri, volume)
   }
 }
 
@@ -608,9 +627,12 @@ def playTextAndResume(text, volume=null) {
   }
 }
 
-def speak(text) {
-  log "speak(\"${text}\")"
-  playText(text)
+def speak(text, volume=null, voice=null) {
+  log "speak(\"${text}\", ${volume}, ${voice ? '"' + voice + '"' : null})"
+  def tts = getTts(text, voice)
+  if (tts) {
+    playUri(tts.uri, volume)
+  }
 }
 
 //--- Synchronization
@@ -619,9 +641,25 @@ private getPlayerIds(players) {
     .findAll { it != null }
 }
 
+private actOnSlavesIfMaster(action) {
+  if (state.syncGroup && state.syncGroup[0] == device.name) {
+    def slaveIds = getPlayerIds(state.syncGroup.tail())
+    if (slaveIds) {
+      action(slaveIds)
+    }
+  }
+}
+
+private refreshSlavesStatusIfMaster() {
+  actOnSlavesIfMaster(parent.&refreshStatus)
+}
+
+private updateSlavesplayPauseIfMaster(playPause) {
+  actOnSlavesIfMaster({ slaveIds -> parent.updatePlayPauseIfOn(slaveIds, playPause) })
+}
+
 def sync(slaves) {
   log "sync(\"${slaves}\")"
-  def parent = getParent()
   def slaveIds = getPlayerIds(slaves.tokenize(","))
   if (slaveIds) {
     slaveIds.each { sendCommand(["sync", it]) }
@@ -635,11 +673,11 @@ def unsync() {
 
 def unsyncAll() {
   log "unsyncAll()"
-  def slaves = state.syncGroup?.findAll { it != device.name }
-  def syncGroupIds = getPlayerIds(slaves)
-  if (syncGroupIds) {
-    getParent().unsyncAll(syncGroupIds)
-    statusRefresh()
+  if (state.syncGroup) {
+    def syncGroupIds = getPlayerIds(state.syncGroup)
+    if (syncGroupIds) {
+      parent.unsync(syncGroupIds)
+    }
   }
 }
 
@@ -649,7 +687,7 @@ def transferPlaylist(destination) {
   def tempPlaylist = "tempplaylist_from_" + device.deviceNetworkId.replace(":", "")
   sendCommand(["playlist", "save", tempPlaylist])
   captureTime()
-  if (getParent().transferPlaylist(destination, tempPlaylist, state.trackTime)) {
+  if (parent.transferPlaylist(destination, tempPlaylist, state.trackTime)) {
     sendCommand(["playlist", "clear"])
   }
   clearCapturedTime()

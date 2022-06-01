@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 01/06/2022 - v2.2 - Add support for better synchronized player updates
  * 27/09/2021 - v2.1 - Indicate connection status on app label
  * 26/09/2021 - v2.0.1 - Fix bug causing requests not to be URL encoded
  * 26/09/2021 - v2.0 - Replace player HTTP commands and polling with LMS CLI commands and subscription
@@ -327,9 +328,32 @@ private getChildDeviceId(name) {
   result ? result : getChildDevice(trimmedName)?.deviceNetworkId
 }
 
-def unsyncAll(playerIds) {
-  log "unsyncAll(${playerIds})"
-  playerIds?.each { getChildDevice(it)?.unsync() }
+private actOnPlayers(playerIds, action) {
+  playerIds?.each { 
+    player = getChildDevice(it)
+    if (player) {
+      action(player)
+    }
+  }
+}
+
+def unsync(playerIds) {
+  log "unsync(${playerIds})"
+  actOnPlayers(playerIds, { player -> player.unsync() })
+}
+
+def refreshStatus(playerIds) {
+  log "refreshStatus(${playerIds})"
+  actOnPlayers(playerIds, { player -> player.refreshStatus() })
+}
+
+def updatePlayPauseIfOn(playerIds, playPause) {
+  log "updatePlayPauseIfOn(${playerIds}, ${playPause})"
+  actOnPlayers(playerIds, { player -> 
+    if (player?.currentValue("switch") == "on") {
+      player.updatePlayPause(playPause)
+    }
+  })
 }
 
 def transferPlaylist(destination, tempPlaylist, time) {
