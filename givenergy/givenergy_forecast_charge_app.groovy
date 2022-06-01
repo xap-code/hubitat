@@ -21,6 +21,8 @@
  * 15/03/2022 - v0.4 - Allow scenario weighting with Solcast to select between p10-p-p90 estimates
  * 16/03/2022 - v0.5 - Round Solcast forecast
  * 22/03/2022 - v0.6 - Adjust charge start time based on charge target and set schedule based on earliest start time
+ * 24/03/2022 - v0.7 - Include charge times in log message
+ * 27/03/2022 - v0.8 - Use LocalDateTime to account for time zone offsets
  */
 
 definition(
@@ -70,7 +72,7 @@ preferences {
   }
 }
 
-import java.time.Duration 
+import java.time.*
 
 def getThresholdCount() {
   state.thresholdCount ?: 1
@@ -145,15 +147,20 @@ def initialize() {
 }
 
 def scheduleUpdateChargeTarget() {
-  def time = subtractMinutes(chargeStartTime, 5)
-  schedule("0 ${time.minutes} ${time.hours} ? * *", updateChargeTarget)
+  def time = toLocalDateTime(chargeStartTime).minusMinutes(2)
+  schedule("0 ${time.minute} ${time.hour} ? * *", updateChargeTarget)
 }
 
-def subtractMinutes(time, minutes) {
-  def cal=Calendar.instance
-  cal.setTime(toDateTime(time))
-  cal.add(Calendar.MINUTE, -minutes)
-  def calculatedStartTime=cal.time
+def toLocalDateTime(inputDateTime) {
+
+  def inputTime=inputDateTime.substring(inputDateTime.indexOf("T"))
+  int offsetIndex=Math.max(inputTime.indexOf("+"), inputTime.indexOf("-"))
+
+  ZoneId zone = offsetIndex > -1
+  ? ZoneId.of(inputTime.substring(offsetIndex))
+  : ZoneId.systemDefault()
+  
+  toDateTime(inputDateTime).toInstant().atZone(zone).toLocalDateTime()
 }
 
 def updateChargeTarget() {
@@ -226,10 +233,12 @@ def adjustToForecast(forecastEnergy) {
   log.info "Today's solar PV generation forecast is ${forecastEnergy}Wh"
 
   def chargeTarget = determineChargeTarget(forecastEnergy)
-  if (chargeTarget >= 0) {
-    log.info "Set charge target to ${chargeTarget}%"
-    setChargeSlot(chargeTarget)
-  }
+  def calculatedStartTime = calculateChargeStartTime(chargeTarget)
+  def endTime = toLocalDateTime(chargeEndTime)
+
+  log.info "Set charge target to ${chargeTarget}%, charging from ${calculatedStartTime} until ${endTime}"
+
+  setChargeSlot(chargeTarget, calculatedStartTime, endTime)
 }
 
 def setDefaultTarget() {
@@ -292,24 +301,23 @@ def determineChargeTarget(forecastEnergy) {
 def calculateChargeStartTime(chargeToPercent) {
 
   def chargeTargetkWh=batteryCapacity * chargeToPercent/100.0
-  def chargeTimeMinutes=(int) Math.ceil(chargeTargetkWh*1.05 / batteryChargeRate*60)
-  def calculatedStartTime=subtractMinutes(chargeEndTime, chargeTimeMinutes)
+  def chargeTimeMinutes=(int) Math.ceil(chargeTargetkWh / batteryChargeRate*60)
+  def calculatedStartTime=toLocalDateTime(chargeEndTime).minusMinutes(chargeTimeMinutes)
 
   log "chargeToPercent=${chargeToPercent}, chargeTargetkWh=${chargeTargetkWh}, chargeTimeMinutes=${chargeTimeMinutes}, calculatedStartTime=${calculatedStartTime}"
   
-  def startTime=toDateTime(chargeStartTime)
-  startTime.after(calculatedStartTime) ? startTime : calculatedStartTime
+  def startTime=toLocalDateTime(chargeStartTime)
+  startTime.isAfter(calculatedStartTime) ? startTime : calculatedStartTime
 }
 
-def toSlotTime(inputTime) {
-  def time = inputTime instanceof String ? toDateTime(inputTime) : inputTime
-  String.format("%02d%02d", time.hours, time.minutes)
+def toSlotTime(time) {
+  String.format("%02d%02d", time.hour, time.minute)
 }
 
-def setChargeSlot(chargeToPercent) {
+def setChargeSlot(chargeToPercent, startTime, endTime) {
 
-  def chargeStart = toSlotTime(calculateChargeStartTime(chargeToPercent))
-  def chargeFinish = toSlotTime(chargeEndTime)
+  def chargeStart = toSlotTime(startTime)
+  def chargeFinish = toSlotTime(endTime)
   def uri = "http://${givTcpAddress}:${givTcpPort}/setChargeSlot1"
   def body = "{\"start\": \"${chargeStart}\", \"finish\": \"${chargeFinish}\", \"chargeToPercent\": \"${chargeToPercent}\"}"
 
