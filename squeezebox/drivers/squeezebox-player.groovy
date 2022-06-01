@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 01/06/2022 - v2.2.1 - Refresh synchronized players when playlist is cleared.
  * 01/06/2022 - v2.2 - Update commands to better match Hubitat capability specifications. Fix bug where slave players not updating status correctly.
  * 25/10/2021 - v2.1 - Add support for AudioVolume capability
  * 27/09/2021 - v2.0.6 - Handle 'playlist newsong' and 'newmetadata' to refresh track details
@@ -237,6 +238,7 @@ private processPlaylist(msg) {
     case "clear":
       updateTrackData(null, null, null, null)
       updateTrackDescription(null, null)
+      refreshOthersStatus()
       break
       
     default:
@@ -656,6 +658,16 @@ private refreshSlavesStatusIfMaster() {
 
 private updateSlavesplayPauseIfMaster(playPause) {
   actOnSlavesIfMaster({ slaveIds -> parent.updatePlayPauseIfOn(slaveIds, playPause) })
+}
+
+private refreshOthersStatus() {
+  if (state.syncGroup) {
+    def others = state.syncGroup?.findAll { it != device.name }
+    def otherIds = getPlayerIds(others)
+    if (otherIds) {
+      parent.refreshStatus(otherIds)
+    }
+  }
 }
 
 def sync(slaves) {
