@@ -23,6 +23,7 @@
  * 22/03/2022 - v0.6 - Adjust charge start time based on charge target and set schedule based on earliest start time
  * 24/03/2022 - v0.7 - Include charge times in log message
  * 27/03/2022 - v0.8 - Use LocalDateTime to account for time zone offsets
+ * 24/06/2022 - v0.9 - Retry failed requests to battery
  */
 
 definition(
@@ -72,7 +73,13 @@ preferences {
   }
 }
 
+import groovy.transform.Field
 import java.time.*
+  
+// define constants
+@Field static final int LEAD_TIME_MINUTES = 2
+@Field static final int MIN_CHARGE_MINUTES = 10
+@Field static final int MAX_ATTEMPTS = 5
 
 def getThresholdCount() {
   state.thresholdCount ?: 1
@@ -147,7 +154,7 @@ def initialize() {
 }
 
 def scheduleUpdateChargeTarget() {
-  def time = toLocalDateTime(chargeStartTime).minusMinutes(2)
+  def time = toLocalDateTime(chargeStartTime).minusMinutes(LEAD_TIME_MINUTES)
   schedule("0 ${time.minute} ${time.hour} ? * *", updateChargeTarget)
 }
 
@@ -220,7 +227,7 @@ def handleForecastSolar(response, data) {
   
   log "Received JSON: ${json}"
   
-  if (json?.result) {
+  if (json?.result?.watt_hours_day) {
     def forecastEnergy = chooseDailyForecast(json.result.watt_hours_day)
     adjustToForecast(forecastEnergy)
   } else {
@@ -231,20 +238,32 @@ def handleForecastSolar(response, data) {
 def adjustToForecast(forecastEnergy) {
 
   log.info "Today's solar PV generation forecast is ${forecastEnergy}Wh"
-
   def chargeTarget = determineChargeTarget(forecastEnergy)
-  def calculatedStartTime = calculateChargeStartTime(chargeTarget)
-  def endTime = toLocalDateTime(chargeEndTime)
-
-  log.info "Set charge target to ${chargeTarget}%, charging from ${calculatedStartTime} until ${endTime}"
-
-  setChargeSlot(chargeTarget, calculatedStartTime, endTime)
+  setForChargeTarget(chargeTarget)
 }
 
 def setDefaultTarget() {
 
   log.warn "Unable to get solar forecast data. Using default charge target of ${defaultTargetCharge}%"
-  setChargeSlot(defaultTargetCharge)
+  setForChargeTarget(defaultTargetCharge)
+}
+
+def toSlotTime(time) {
+  String.format("%02d:%02d", time.hour, time.minute)
+}
+
+def setForChargeTarget(chargeTarget) {
+
+  def startTime = toLocalDateTime(chargeStartTime)
+  def endTime = toLocalDateTime(chargeEndTime)
+  def calculatedStartTime = calculateChargeStartTime(startTime, endTime, chargeTarget)
+  
+  log.info "Set charge target to ${chargeTarget}%, charging from ${calculatedStartTime} until ${endTime}"
+
+  def chargeStart = toSlotTime(calculatedStartTime)
+  def chargeFinish = toSlotTime(endTime)
+
+  setChargeSlot(chargeTarget, chargeStart, chargeFinish)
 }
 
 def getForecastDate(forecast) {
@@ -298,26 +317,19 @@ def determineChargeTarget(forecastEnergy) {
   targetCharge
 }
 
-def calculateChargeStartTime(chargeToPercent) {
+def calculateChargeStartTime(startTime, endTime, chargePercent) {
 
-  def chargeTargetkWh=batteryCapacity * chargeToPercent/100.0
-  def chargeTimeMinutes=(int) Math.ceil(chargeTargetkWh / batteryChargeRate*60)
-  def calculatedStartTime=toLocalDateTime(chargeEndTime).minusMinutes(chargeTimeMinutes)
+  def chargeTargetkWh = batteryCapacity * chargePercent/100.0
+  def chargeTimeMinutes = (int) Math.ceil(chargeTargetkWh / batteryChargeRate*60)
+  def calculatedStartTime = endTime.minusMinutes(chargeTimeMinutes)
 
-  log "chargeToPercent=${chargeToPercent}, chargeTargetkWh=${chargeTargetkWh}, chargeTimeMinutes=${chargeTimeMinutes}, calculatedStartTime=${calculatedStartTime}"
+  log "chargePercent=${chargePercent}, chargeTargetkWh=${chargeTargetkWh}, chargeTimeMinutes=${chargeTimeMinutes}, calculatedStartTime=${calculatedStartTime}"
   
-  def startTime=toLocalDateTime(chargeStartTime)
   startTime.isAfter(calculatedStartTime) ? startTime : calculatedStartTime
 }
 
-def toSlotTime(time) {
-  String.format("%02d%02d", time.hour, time.minute)
-}
+def setChargeSlot(chargeToPercent, chargeStart, chargeFinish, attempts = 0) {
 
-def setChargeSlot(chargeToPercent, startTime, endTime) {
-
-  def chargeStart = toSlotTime(startTime)
-  def chargeFinish = toSlotTime(endTime)
   def uri = "http://${givTcpAddress}:${givTcpPort}/setChargeSlot1"
   def body = "{\"start\": \"${chargeStart}\", \"finish\": \"${chargeFinish}\", \"chargeToPercent\": \"${chargeToPercent}\"}"
 
@@ -325,19 +337,46 @@ def setChargeSlot(chargeToPercent, startTime, endTime) {
   
   def postParams = [
     uri: uri,
-    requestContentType: 'application/json',
     contentType: 'application/json',
     timeout: 60,
     body: body
   ]
 
-  asynchttpPost "receiveChargeTargetResponse", postParams
+  def data = [
+    chargeToPercent: chargeToPercent,
+    chargeStart: chargeStart,
+    chargeFinish: chargeFinish,
+    attempts: ++attempts
+  ]
+  
+  asynchttpPost "receiveChargeSlotResponse", postParams, data
 }
 
-def receiveChargeTargetResponse(response, data) {
+def retrySetChargeSlot(data) {
+  
+  setChargeSlot(
+    data.chargeToPercent,
+    data.chargeStart,
+    data.chargeFinish,
+    data.attempts
+  )
+}
+
+def receiveChargeSlotResponse(response, data) {
 
   def json = getResponseJson(response)
-  log.info json.result
+
+  if (json.result.contains("failed")) {
+    log.warn json.result
+    if (data.attempts < MAX_ATTEMPTS) {
+      def delayInSeconds = data.attempts
+      runIn(delayInSeconds, "retrySetChargeSlot", [data: data])
+    } else {
+      log.error "Failed to set charge target after ${data.attempts} attempts"
+    }
+  } else {
+    log.info json.result
+  }
 }
 
 private getResponseJson(response) {
