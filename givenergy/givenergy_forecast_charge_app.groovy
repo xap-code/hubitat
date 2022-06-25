@@ -78,7 +78,6 @@ import java.time.*
   
 // define constants
 @Field static final int LEAD_TIME_MINUTES = 2
-@Field static final int MIN_CHARGE_MINUTES = 10
 @Field static final int MAX_ATTEMPTS = 5
 
 def getThresholdCount() {
