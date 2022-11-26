@@ -4,7 +4,7 @@
   "packages": [
     {
       "id": "76a715d4-a6d2-4071-a532-2588933e8b8c",
-      "name": "Squeezebox Integration",
+      "name": "Squeezebox Connect",
       "category": "Integrations",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/packageManifest.json",
       "description": "Integrates a Squeezebox Server (LMS) instance into Hubitat.",
