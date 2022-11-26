@@ -8,19 +8,13 @@
   "apps": [
     {
       "id": "79a3861f-870e-45f7-9d50-53f508bba8cb",
-      "name": "Squeezebox Integration",
+      "name": "Squeezebox Connect",
       "namespace": "xap",
-      "alternateNames": [
-        {
-          "name": "Squeezebox Connect",
-          "namespace": "xap"
-        }
-      ]
-      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-integration.groovy",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy",
       "required": true,
       "oauth": false,
       "primary": true,
-      "version": "2.2.1"
+      "version": "2.2"
     }
   ],
   "drivers": [
