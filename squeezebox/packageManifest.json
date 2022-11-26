@@ -1,5 +1,5 @@
 {
-  "packageName": "Squeezebox Connect",
+  "packageName": "Squeezebox Integration",
   "author": "Ben Deitch",
   "minimumHEVersion": "2.2",
   "dateReleased": "2021-09-25",
@@ -8,13 +8,19 @@
   "apps": [
     {
       "id": "79a3861f-870e-45f7-9d50-53f508bba8cb",
-      "name": "Squeezebox Connect",
+      "name": "Squeezebox Integration",
       "namespace": "xap",
-      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-connect.groovy",
+      "alternateNames": [
+        {
+          "name": "Squeezebox Connect",
+          "namespace": "xap"
+        }
+      ]
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/app/squeezebox-integration.groovy",
       "required": true,
       "oauth": false,
       "primary": true,
-      "version": "2.2"
+      "version": "2.2.1"
     }
   ],
   "drivers": [
