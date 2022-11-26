@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 26/11/2022 - v2.2.1 - Replace app name literal with app.name
  * 01/06/2022 - v2.2 - Add support for better synchronized player updates
  * 27/09/2021 - v2.1 - Indicate connection status on app label
  * 26/09/2021 - v2.0.1 - Fix bug causing requests not to be URL encoded
@@ -63,7 +64,7 @@ preferences {
       input(name: "password", type: "password", required: false, title: "Password")
     }
     section("<h3>Other Settings</h3>") {
-      paragraph("Enables/disables debug logging for the Squeezebox Connect app and all the Squeezebox Player child devices.")
+      paragraph("Enables/disables debug logging for the app and all child devices.")
       input(name: "debugLogging", type: "bool", title: "Enable debug logging?", defaultValue: false, required: false)
     }
   }
@@ -219,7 +220,7 @@ private initializePlayers() {
 
 private processJsonMessage(msg) {
 
-  log "Squeezebox Connect Received [${msg.params[0]}]: ${msg}"
+  log "Received [${msg.params[0]}]: ${msg}"
 
   def playerId = msg.params[0]
   if (playerId == "") {
@@ -315,7 +316,7 @@ def getServerPassword() {
 }
 
 def setConnected(connected) {
-  app.updateLabel(connected ? "Squeezebox Connect" : "Squeezebox Connect <span style='color:red'>(Server Disconnected)</span>")
+  app.updateLabel(connected ? app.name : "${app.name} <span style='color:red'>(Server Disconnected)</span>")
 }
 
 private getChildDeviceName(id) {
@@ -377,7 +378,7 @@ def transferPlaylist(destination, tempPlaylist, time) {
  
 private executeCommand(params) {
 
-  log "Squeezebox Connect Send: ${params}"
+  log "Send: ${params}"
 
   def jsonBody = buildJsonRequest(params)
 
