@@ -15,11 +15,10 @@
  */
 
 /* ChangeLog:
- * ??/01/2023 - Initial read-only implementation without actions
+ * 08/01/2023 - Initial read-only implementation without actions
  */
 metadata {
   definition (name: "Miele Generic Device", namespace: "xap", author: "Ben Deitch") {
-    capability "Refresh"
     capability "Sensor"
     
     attribute "elapsedTime", "number"
@@ -39,6 +38,9 @@ metadata {
     attribute "startTimeDescription", "string"
     attribute "status", "string"
   }
+	preferences {
+		input name: "debugEnabled", title: "Enable debug logging", type: "bool"
+	}
 }
 
 import groovy.transform.Field
@@ -52,12 +54,8 @@ import java.time.format.DateTimeFormatter
 @Field static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
 
 def configure(mieleDeviceType) {
+  logDebug("configured with mieleDeviceType: ${mieleDeviceType}")
   state.mieleDeviceType = mieleDeviceType
-}
-
-// TODO Preferences: debug logging
-
-def refresh() {
 }
 
 def getMieleDeviceId() {
@@ -69,6 +67,7 @@ def getMieleDeviceType() {
 }
 
 def eventReceived(data) {
+  logDebug("received: ${data}")
   sendStatusEvent(data.status)
   sendProgramEvents(data.ProgramID, data.programPhase)
   sendDurationEvents(data.remainingTime, "remaining", "remainingTime")
@@ -181,4 +180,14 @@ private buildLocalTimeText(time) {
   .atZone(ZoneId.systemDefault())
   .toLocalDateTime()
   .format(TIME_FORMATTER)
+}
+
+private logDebug(message) {
+  if (debugEnabled) {
+    log.debug buildLogMessage(message)
+  }
+}
+
+private buildLogMessage(message) {
+  "[${device.name}] ${message}"
 }

@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * ??/01/2023 - Initial read-only implementation without actions
+ * 08/01/2023 - Initial read-only implementation without actions
  */
 
 definition(
@@ -123,7 +123,10 @@ def authorize(params) {
   }
   
   if (params?.logout) {
-    logout()
+    if (params.logout > (context.logout ?: 0)) {
+      logout()
+      context.logout = params.logout
+    }
   }
 
   dynamicPage(name: "authorize", title: "", install: false, uninstall: false, nextPage: "configure") {
@@ -133,9 +136,9 @@ def authorize(params) {
       input "clientId", "string", title: "Client ID", required: false, submitOnChange: true
       input "clientSecret", "string", title: "Client Secret", required: false, submitOnChange: true
       if (state.clientAccessToken) {
-        href title: "Deauthorize", description: "Logout from Miele (NB: This will disable any integrated devices)", required: false, page: "authorize", params: ["logout": true]
+        href title: "Deauthorize", description: "Logout from Miele (NB: This will disable any integrated devices)", required: false, page: "authorize", params: ["logout": (context.logout ?: 0) + 1 ]
       } else if (clientId && clientSecret) {
-        href title: "Authorize", description: "Login to Miele", required: false, url: buildLoginUrl(), page: "authorize", style: "external"
+        href title: "Authorize", description: "Login to Miele", required: false, url: buildLoginUrl(), style: "external"
       }
       if (context.authError) {
         paragraph """<span style="color: darkred; font-weight: bold">${context.authError}</span>"""
@@ -388,6 +391,7 @@ private handleLogoutResponse(response) {
     state.remove("clientAccessToken")
     state.remove("clientRefreshToken")
     context.authSuccess = "Logout succeeded; Please re-authorize to use the integration."
+    logInfo "Logout succeeded"
   } else {
     logError(context.authError = "Logout failed; response status ${response.getStatus()}: ${response.getData()}")
   }

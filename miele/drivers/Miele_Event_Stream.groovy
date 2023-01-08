@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * ??/01/2023 - Initial implementation
+ * 08/01/2023 - Initial implementation
  */
 metadata {
   definition (name: "Miele Event Stream", namespace: "xap", author: "Ben Deitch") {
@@ -23,6 +23,9 @@ metadata {
     command "close"
     command "configure", ["string", "string"]
   }
+	preferences {
+		input name: "debugEnabled", title: "Enable debug logging", type: "bool"
+	}
 }
 
 import groovy.transform.Field
@@ -31,6 +34,7 @@ import groovy.transform.Field
 @Field static final long MAX_LAST_MESSAGE_AGE_MILLIS = 30 * 1000
 
 def configure(url, accessToken) {
+  logDebug("configured with accessToken and url: ${url}")
   state.url = url;
   state.accessToken = encrypt(accessToken);
 }
@@ -63,7 +67,7 @@ def eventStreamStatus(message) {
       break;
     
     case "STOP":
-      logDebug(message)
+      logDebug(message + " (NB: if event stream has been re-initialized this message may refer to the previous event stream that has been replaced)")
       break;
       
     case "ERROR":
@@ -110,14 +114,14 @@ private logInfo(message) {
   log.info buildLogMessage(message)
 }
 
-private logError(message) {
-  log.error buildLogMessage(message)
+private logWarn(message) {
+  log.warn buildLogMessage(message)
 }
 
 private logDebug(message) {
-  //if (parent.isDebugLogEnabled()) {
-    //log.debug buildLogMessage(message)
-  //}
+  if (debugEnabled) {
+    log.debug buildLogMessage(message)
+  }
 }
 
 private buildLogMessage(message) {
