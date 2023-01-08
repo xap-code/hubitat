@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * 08/01/2023 - Initial read-only implementation without actions
+ * 08/01/2023 - v1.0.0 - Initial read-only implementation without actions
  */
 metadata {
   definition (name: "Miele Generic Device", namespace: "xap", author: "Ben Deitch") {

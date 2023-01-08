@@ -1,0 +1,38 @@
+{
+  "packageName": "Miele Integration",
+  "author": "Ben Deitch",
+  "minimumHEVersion": "2.3",
+  "dateReleased": "2022-01-??",
+  "documentationLink": "https://github.com/xap-code/hubitat/blob/master/miele/README.md",
+  "communityLink": "https://community.hubitat.com/???",
+  "apps": [
+    {
+      "id": "fa41f26a-34ae-466f-8f15-a31fb93ab818",
+      "name": "Miele Integration",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/app/Miele_Integration.groovy",
+      "required": true,
+      "oauth": true,
+      "primary": true,
+      "version": "1.0.0"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "cb610579-d175-45b3-b1e3-c64910bb002c",
+      "name": "Miele Event Stream",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/drivers/Miele_Event_Stream.groovy",
+      "required": true,
+      "version": "1.0.0"
+    },
+    {
+      "id": "71ae0b11-ace4-459a-a910-4883947021d4",
+      "name": "Miele Generic Device",
+      "namespace": "xap",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/drivers/Miele_Generic_Device.groovy",
+      "required": true,
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * 08/01/2023 - Initial implementation
+ * 08/01/2023 - v1.0.0 - Initial implementation
  */
 metadata {
   definition (name: "Miele Event Stream", namespace: "xap", author: "Ben Deitch") {
