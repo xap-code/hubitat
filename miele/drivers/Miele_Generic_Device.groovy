@@ -119,7 +119,7 @@ private sendDurationEvents(duration, durationName, eventName) {
     durationDescription = RESET_STRING
   }
   
-  sendEvent name: eventName, value: totalMinutes
+  sendEvent name: eventName, value: totalMinutes, unit: "minutes"
   sendEvent name: eventName + "Text", value: durationText
   sendEvent name: eventName + "Description", value: durationDescription
 }
