@@ -223,7 +223,7 @@ def createEventStreamDevice() {
       ["name": "Miele Event Stream"]
     )
   eventStreamDevice.configure(MIELE_API_BASE + EVENTS_PATH, decrypt(state.clientAccessToken))
-  logInfo "Device '${genericDevice.name}' created [${genericDevice.deviceNetworkId}]"
+  logInfo "Device '${eventStreamDevice.name}' created (dni=${eventStreamDevice.deviceNetworkId})"
 }
 
 def createGenericDevice(mieleDevice) {
@@ -234,7 +234,7 @@ def createGenericDevice(mieleDevice) {
     ["name": mieleDevice.name]
   )
   genericDevice.configure(mieleDevice.type)
-  logInfo "Device '${genericDevice.name}' created [${genericDevice.deviceNetworkId}]"
+  logInfo "Device '${genericDevice.name}' created (dni=${genericDevice.deviceNetworkId})"
 }
 
 def eventReceived(message) {

@@ -21,7 +21,6 @@ metadata {
   definition (name: "Miele Event Stream", namespace: "xap", author: "Ben Deitch") {
     capability "Initialize"
     command "close"
-    command "configure", ["string", "string"]
   }
 	preferences {
 		input name: "debugEnabled", title: "Enable debug logging", type: "bool"
