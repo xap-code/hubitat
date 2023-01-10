@@ -16,7 +16,7 @@ credentials is not currently available but you can request access via email - de
 are provided on the page.)*
 
 ### Hubitat Package Manager
-*(The app is not yet available - waiting on approval from Miele)*
+*(The Miele Integration app is not yet available - waiting on approval from Miele)*
 Installation of Miele Integration is most easily performed via the Hubitat Package Manager (HPM). This is the preferred method for installation as it easily allows updates to be discovered and applied. Information on installing and using HPM can be found at https://community.hubitat.com/t/release-hubitat-package-manager-hubitatcommunity.
 
 Once HPM is installed on your hub you can install Miele Integration by opening the "Hubitat Package Manager" app and selecting "Install" from the main menu, then "Search by Keywords", and then enter "Miele" as your search criteria. Select "Miele Integration" and then "Next" (twice) to install it.
@@ -76,7 +76,7 @@ Attribute values are provided depending on if the associated device state inform
   - e.g. `"02:01"`, `"00:53"`
   - (set to a blank string " " if no program is in progress)
 - **`elapsedTimeDescription`**  A string describing the elapsed time
-  - e.g. `"2 hours 1 minute"`, `"53 minutes"`
+  - e.g. `"2 hours 1 minute elapsed"`, `"53 minutes elapsed"`
   - (set to a blank string " " if no program is in progress)
 - **`remainingTime`** The number of minutes remaining for the selected program
   - e.g. `180`, `26`
@@ -85,7 +85,7 @@ Attribute values are provided depending on if the associated device state inform
   - e.g. `"03:00"`, `"00:26"`
   - (set to a blank string " " if no program is selected)
 - **`remainingTimeDescription`**  A string describing the remaining time
-  - e.g. `"3 hours 0 minutes"`, `"26 minutes"`
+  - e.g. `"3 hours 0 minutes remaining"`, `"26 minutes remaining"`
   - (set to a blank string " " if no program is selected)
   
 ## Future Releases
