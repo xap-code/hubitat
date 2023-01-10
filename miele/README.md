@@ -30,7 +30,7 @@ At any point after authorizing the Miele Integration you can return to the app a
 If the app has been successfully authorized then you will see a prompt to select the Miele devices that you want to integrate with Hubitat and a drop down list of the available devices. Once you have selected the devices you want to integrate the app will display a list of the Hubitat devices that will be created when you select "Done". 
 
 ### Miele Event Stream
-The first time the app is configured you will also see the "Miele Event Stream" device listed under "Create Hubitat devices". This device is required by the integration and is used to connect to the event stream provided by the Miele 3rd Party API in order to get device updates. Should you accidentally remove this device you can come back to the app configuration and select "Done" again which will recreate the event stream device.
+The first time the app is configured you will also see the "Miele Event Stream" device listed under "Create Hubitat devices". This device is required by the integration and is used to connect to the event stream provided by the Miele 3rd Party API in order to get device updates.
 
 ## Using Miele Integration devices
 Each Miele@home device that is integrated with Hubitat is created as a "Miele Generic Device". This reflects the design approach used for the Miele 3rd Party API where a single generic device model is used for all device types. (More details on this design approach are provided at https://www.miele.com/developer/concept.html.)

@@ -220,7 +220,7 @@ def createEventStreamDevice() {
       "xap",
       "Miele Event Stream",
       EVENTSTREAM_DNI,
-      ["name": "Miele Event Stream"]
+      ["name": "Miele Event Stream", "isComponent": true]
     )
   eventStreamDevice.configure(MIELE_API_BASE + EVENTS_PATH, decrypt(state.clientAccessToken))
   logInfo "Device '${eventStreamDevice.name}' created (dni=${eventStreamDevice.deviceNetworkId})"
