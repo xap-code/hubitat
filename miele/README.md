@@ -91,7 +91,7 @@ Attribute values are provided depending on if the associated device state inform
 ## Future Releases
 Further releases are planned (no dates specified as this is implemented in my spare time). Functionality to be added:
 - Further device states to be included, as well as Hubitat child devices to allow easier use of properties related to lights and temperatures.
-- Device command to allow the full device JSON to be read and used in other apps. e.g. Rule Machine, webCoRE
+- Device command to allow the full device JSON to be read and used in other apps. e.g. webCoRE
 - Device commands to allow device actions available in the Miele 3rd Party API to be invoked.
 - Custom Hubitat device for Miele robot vacuums to expose state and actions specific to those devices only. e.g. battery, rooms
 
