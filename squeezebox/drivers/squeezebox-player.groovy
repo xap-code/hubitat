@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 12/01/2023 - v2.3 - Add parameter to delay TTS playback
  * 01/06/2022 - v2.2.1 - Refresh synchronized players when playlist is cleared.
  * 01/06/2022 - v2.2 - Update commands to better match Hubitat capability specifications. Fix bug where slave players not updating status correctly.
  * 25/10/2021 - v2.1 - Add support for AudioVolume capability
@@ -92,6 +93,9 @@ metadata {
     command "playText", ["STRING", "NUMBER"]
     command "playTrack", ["STRING", "NUMBER"]
   }
+	preferences {
+		input name: "ttsDelay", title: "TTS delay enable", description: "(Turn on if the beginning of the message is being dropped.)", type: "bool"
+	}
 }
 
 import groovy.transform.Field
@@ -591,8 +595,8 @@ def fav6() { playFavorite(6) }
 private getTts(text, voice=null) {
   if (text) {
     text = text.replace("&", "and")
-    // add a break to the end of the generated file, prevents text being repeated if LMS decides to loop?!?
-    def result = textToSpeech("${text}<break time='2s'/>", voice)
+    // always add a break to the end of the generated file, prevents text being repeated if LMS decides to loop
+    def result = textToSpeech("${ttsDelay ? "<break time='2s'/>" : ""}${text}<break time='2s'/>", voice)
     // reduce the duration to account for the added break
     if (result) {
       result.duration -= 2
