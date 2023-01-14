@@ -155,7 +155,7 @@ def authorize(params) {
 
 def header() {
   section {
-    paragraph """<div style="width: 100%; background-color: lightgray; text-align: center; "><img src="https://www.miele.com/developer/wmedia/svg/logo.svg" onerror="this.src=this.src.replace(".svg",".png"); this.onerror=null;" height="64" /></div>"""
+    paragraph """<h2>${app.name}</h2>"""
   }
 }
 
