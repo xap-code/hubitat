@@ -9,14 +9,9 @@ Whilst the app has to interact with the Miele cloud-based 3rd Party API, it is d
 ## Installation
 
 ### Pre-Installation
-In order to use the Miele Integration app with your hub you first need to request client
- credentials from Miele. You can do this by visiting https://developer.miele.com and 
-clicking on "Get involved" at the top of the page. *(Automatic registration for client 
-credentials is not currently available but you can request access via email - details 
-are provided on the page.)*
+In order to use the Miele Integration app with your hub you first need to request client credentials from Miele. You can do this by visiting https://developer.miele.com and clicking on "Get involved" at the top of the page. *(Automatic registration for client credentials is not currently available but you can request access via email - details are provided on the page.)*
 
 ### Hubitat Package Manager
-*(The Miele Integration app is not yet available - waiting on approval from Miele)*
 Installation of Miele Integration is most easily performed via the Hubitat Package Manager (HPM). This is the preferred method for installation as it easily allows updates to be discovered and applied. Information on installing and using HPM can be found at https://community.hubitat.com/t/release-hubitat-package-manager-hubitatcommunity.
 
 Once HPM is installed on your hub you can install Miele Integration by opening the "Hubitat Package Manager" app and selecting "Install" from the main menu, then "Search by Keywords", and then enter "Miele" as your search criteria. Select "Miele Integration" and then "Next" (twice) to install it.
