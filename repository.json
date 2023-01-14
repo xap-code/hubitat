@@ -9,6 +9,14 @@
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/packageManifest.json",
       "description": "Integrates a Squeezebox Server (LMS) instance into Hubitat.",
       "tags": ["LAN", "Multimedia", "Speakers"]
+    },
+    {
+      "id": "e2d7113d-849d-4cd9-888b-53ac86db1f76",
+      "name": "Miele Integration",
+      "category": "Integrations",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/packageManifest.json",
+      "description": "Integrates Miele@home devices into Hubitat.",
+      "tags": ["Appliances", "Cloud"]
     }
   ]
 }
