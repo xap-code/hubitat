@@ -40,9 +40,9 @@ metadata {
     attribute "status", "string"
   }
   preferences {
-    input name: "debugEnabled", title: "Enable debug logging", type: "bool"
     input name: "textEventsEnabled", title: "Enable text events", type: "bool", defaultValue: true
     input name: "descriptionEventsEnabled", title: "Enable description events", type: "bool", defaultValue: true
+    input name: "debugEnabled", title: "Enable debug logging", type: "bool"
   }
 }
 
