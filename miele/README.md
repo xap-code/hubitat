@@ -34,7 +34,7 @@ Each Miele@home device that is integrated with Hubitat is created as a "Miele Ge
 In v1 of Miele Integration the Miele Generic Device is fairly simple. It only advertises the "Sensor" device capability and some attributes which expose a subset of the Miele device state values. In future this will be extended with more state information and eventually the ability to invoke device actions.
 
 Attribute values are provided depending on if the associated device state information is available for a particular device received from the Miele 3rd Party API.
-#### Attributes:
+#### Generic Device Attributes:
 - **`status`** Indicates the current device status
   - e.g. `"Off"`, `"In Use"`
 - **`program`** The currently selected program
@@ -82,6 +82,14 @@ Attribute values are provided depending on if the associated device state inform
 - **`remainingTimeDescription`**  A string describing the remaining time
   - e.g. `"3 hours 0 minutes remaining"`, `"26 minutes remaining"`
   - (set to a blank string " " if no program is selected)
+#### Generic Device Preferences:
+- Enable debug logging
+   - Output debug logs for the device (defaults to _false_)
+- Enable text events
+   - Raise events for attributes that present values as simple text (attributes ending `...Text`) (defaults to _true_)
+- Enable description events
+   - Raise events for attributes that present values as descriptive text (attributes ending `...Description`) (defaults to _true_)
+
   
 ## Future Releases
 Further releases are planned (no dates specified as this is implemented in my spare time). Functionality to be added:

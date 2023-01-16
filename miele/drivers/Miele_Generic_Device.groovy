@@ -16,6 +16,7 @@
 
 /* ChangeLog:
  * 08/01/2023 - v1.0.0 - Initial read-only implementation without actions
+ * 16/01/2023 - v1.1.0 - Add preferences to enable/disable text and description events
  */
 metadata {
   definition (name: "Miele Generic Device", namespace: "xap", author: "Ben Deitch") {
@@ -38,9 +39,11 @@ metadata {
     attribute "startTimeDescription", "string"
     attribute "status", "string"
   }
-	preferences {
-		input name: "debugEnabled", title: "Enable debug logging", type: "bool"
-	}
+  preferences {
+    input name: "debugEnabled", title: "Enable debug logging", type: "bool"
+    input name: "textEventsEnabled", title: "Enable text events", type: "bool", defaultValue: true
+    input name: "descriptionEventsEnabled", title: "Enable description events", type: "bool", defaultValue: true
+  }
 }
 
 import groovy.transform.Field
@@ -120,8 +123,12 @@ private sendDurationEvents(duration, durationName, eventName) {
   }
   
   sendEvent name: eventName, value: totalMinutes, unit: "minutes"
-  sendEvent name: eventName + "Text", value: durationText
-  sendEvent name: eventName + "Description", value: durationDescription
+  if (textEventsEnabled) {
+    sendEvent name: eventName + "Text", value: durationText
+  }
+  if (descriptionEventsEnabled) {
+    sendEvent name: eventName + "Description", value: durationDescription
+  }
 }
 
 private buildDurationText(hours, minutes) {
@@ -164,8 +171,12 @@ private sendTimeEvents(hours, minutes, timeName, eventName) {
   }
   
   sendEvent name: eventName, value: time
-  sendEvent name: eventName + "Text", value: timeText
-  sendEvent name: eventName + "Description", value: timeDescription
+  if (textEventsEnabled) {
+    sendEvent name: eventName + "Text", value: timeText
+  }
+  if (descriptionEventsEnabled) {
+    sendEvent name: eventName + "Description", value: timeDescription
+  }
 }
 
 private calculateTruncatedTimeFromNow(hours, minutes) {    
