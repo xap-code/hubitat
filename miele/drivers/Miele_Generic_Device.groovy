@@ -85,10 +85,8 @@ private sendStatusEvent(status) {
 
 private sendProgramEvents(program, programPhase) {
 
-  if (program.value_raw == null) {
-    return
-  }
-  
+  if (program.value_raw == null || program.value_raw < 0) return
+
   programValue = program.value_localized ?: RESET_STRING
   sendEvent name: "program", value: programValue
 
@@ -108,6 +106,8 @@ private sendProgramEvents(program, programPhase) {
 }
 
 private sendDurationEvents(duration, durationName, eventName) {
+
+  if (!duration) return
 
   hours = duration[0]
   minutes = duration[1]
@@ -146,14 +146,26 @@ private buildTimeValueDescription(value, unit) {
 }
 
 private sendStartTimeEvents(startTime) {
+  if (!startTime) return
   hours = startTime[0]
   minutes = startTime[1]
   sendTimeEvents(hours, minutes, "Start", "startTime")
 }
 
 private sendFinishTimeEvents(startTime, remainingTime) {
-  hours = Math.max(0, startTime[0]) + remainingTime[0]
-  minutes = Math.max(0, startTime[1]) + remainingTime[1]
+
+  if (!remainingTime) return
+
+  if (startTime) {
+    startHours = Math.max(0, startTime[0])
+    startMinutes = Math.max(0, startTime[1])
+  } else {
+    startHours = 0
+    startMinutes = 0
+  }
+
+  hours = startHours + remainingTime[0]
+  minutes = startMinutes + remainingTime[1]
   sendTimeEvents(hours, minutes, "Finish", "finishTime")
 }
 
