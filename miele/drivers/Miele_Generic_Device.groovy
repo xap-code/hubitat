@@ -17,6 +17,7 @@
 /* ChangeLog:
  * 08/01/2023 - v1.0.0 - Initial read-only implementation without actions
  * 16/01/2023 - v1.1.0 - Add preferences to enable/disable text and description events
+ * 17/01/2023 - v1.2.0 - Add signal and remote enable attributes
  */
 metadata {
   definition (name: "Miele Generic Device", namespace: "xap", author: "Ben Deitch") {
@@ -28,12 +29,18 @@ metadata {
     attribute "finishTime", "date"
     attribute "finishTimeText", "string"
     attribute "finishTimeDescription", "string"
+    attribute "fullRemoteControlEnabled", "bool"
+    attribute "mobileStartEnabled", "bool"
     attribute "program", "string"
     attribute "programPhase", "string"
     attribute "programDescription", "string"
     attribute "remainingTime", "number"
     attribute "remainingTimeText", "string"
     attribute "remainingTimeDescription", "string"
+    attribute "signalInfo", "bool"
+    attribute "signalFailure", "bool"
+    attribute "signalDoor", "bool"
+    attribute "smartGridEnabled", "bool"
     attribute "startTime", "date"
     attribute "startTimeText", "string"
     attribute "startTimeDescription", "string"
@@ -70,13 +77,19 @@ def getMieleDeviceType() {
 }
 
 def eventReceived(data) {
+
+  sendStatusEvent data.status
+  sendProgramEvents data.ProgramID, data.programPhase
+  sendDurationEvents data.remainingTime, "remaining", "remainingTime"
+  sendDurationEvents data.elapsedTime, "elapsed", "elapsedTime"
+  sendStartTimeEvents data.startTime
+  sendFinishTimeEvents data.startTime, data.remainingTime
+  sendBooleanEvent data.signalInfo, "signalInfo"
+  sendBooleanEvent data.signalFailure, "signalFailure"
+  sendBooleanEvent data.signalDoor, "signalDoor"
+  sendRemoteEnableEvents data.remoteEnable
+
   logDebug("received: ${data}")
-  sendStatusEvent(data.status)
-  sendProgramEvents(data.ProgramID, data.programPhase)
-  sendDurationEvents(data.remainingTime, "remaining", "remainingTime")
-  sendDurationEvents(data.elapsedTime, "elapsed", "elapsedTime")
-  sendStartTimeEvents(data.startTime)
-  sendFinishTimeEvents(data.startTime, data.remainingTime)
  }
 
 private sendStatusEvent(status) {
@@ -203,6 +216,18 @@ private buildLocalTimeText(time) {
   .atZone(ZoneId.systemDefault())
   .toLocalDateTime()
   .format(TIME_FORMATTER)
+}
+
+private sendRemoteEnableEvents(remoteEnable) {
+  if (!remoteEnable) return
+  sendBooleanEvent remoteEnable.fullRemoteControl, "fullRemoteControlEnabled"
+  sendBooleanEvent remoteEnable.smartGrid, "smartGridEnabled"
+  sendBooleanEvent remoteEnable.mobileStart, "mobileStartEnabled"
+}
+
+private sendBooleanEvent(value, eventName) {
+  if (value == null) return
+  sendEvent name: eventName, value: value
 }
 
 private logDebug(message) {

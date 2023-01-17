@@ -82,6 +82,13 @@ Attribute values are provided depending on if the associated device state inform
 - **`remainingTimeDescription`**  A string describing the remaining time
   - e.g. `"3 hours 0 minutes remaining"`, `"26 minutes remaining"`
   - (set to a blank string " " if no program is selected)
+- **`signalInfo`**  A boolean indicating if a notification is active for the device
+- **`signalFailure`**  A boolean indicating if a failure is active for the device
+- **`signalDoor`**  A boolean indicating if a door-open message is active for the device
+- **`fullRemoteControlEnabled`**  A boolean indicating if the device can be controlled from remote
+- **`mobileStartEnabled`**  A boolean indicating if the device supports the Mobile Start option
+- **`smartGridEnabled`**  A boolean indicating if the device is set to Smart Grid mode
+
 #### Generic Device Preferences:
 - Enable debug logging
    - Output debug logs for the device (defaults to _false_)
