@@ -143,7 +143,7 @@ Child devices are created as one of the following device types:
   
 - **Miele Light Child Device**
   - (supports Light, Sensor, Switch capabilities)
-  - **NB: The on() and off() actions currently do nothing on this device type**
+  - **NB: The on() and off() commands currently do nothing on this device type**
   - Attributes:
     - **`switch`** Indicates if the light is `on` or `off`
 - **Miele Temperature Child Device**
