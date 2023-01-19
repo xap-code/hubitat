@@ -31,11 +31,6 @@ import groovy.transform.Field
 @Field static final int ENABLE = 1
 @Field static final int DISABLE = 2
 
-
-def uninstalled() {
-  parent.disableDeletedChildDevice(device.deviceNetworkId)
-}
-
 def eventReceived(light) {
   switch (light) {
     case ENABLE:
@@ -45,7 +40,7 @@ def eventReceived(light) {
       value = "off"
       break
     default:
-      logWarn("Unrecognised event value: ${light}")
+      logWarn("unrecognised event value: ${light}")
       return
   }
   sendEvent name: "switch", value: value

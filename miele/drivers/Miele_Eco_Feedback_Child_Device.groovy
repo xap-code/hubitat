@@ -1,5 +1,5 @@
 /**
- *  Miele EcoFeedback Child Device
+ *  Miele Eco Feedback Child Device
  *
  *  Copyright 2023 Ben Deitch
  *
@@ -18,9 +18,9 @@
  * 19/01/2023 - v1.0.0 - Initial implementation
  */
 metadata {
-  definition (name: "Miele EcoFeedback Child Device", namespace: "xap", author: "Ben Deitch") {
-    capability "EnergyMeter"
+  definition (name: "Miele Eco Feedback Child Device", namespace: "xap", author: "Ben Deitch") {
     capability "Sensor"
+    capability "EnergyMeter"
 
     attribute "currentEnergyConsumption", "number"
     attribute "currentEnergyConsumptionText", "string"
@@ -57,10 +57,6 @@ import java.text.DecimalFormat
 
 def updated() {
   resetDisabledAttributes()
-}
-
-def uninstalled() {
-  parent.disableDeletedChildDevice(device.deviceNetworkId)
 }
 
 private resetDisabledAttributes() {
