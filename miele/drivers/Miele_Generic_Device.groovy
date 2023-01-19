@@ -52,11 +52,11 @@ metadata {
     input name: "textEventsEnabled", title: "Enable text events", type: "bool", defaultValue: true, description: "<small>Raise events for values as short text descriptions.</small>"
     input name: "descriptionEventsEnabled", title: "Enable description events", type: "bool", defaultValue: true, description: "<small>Raise events for values as longer text descriptions.</small>"
     // child device preferences
-    input name: "ecoFeedbackEnabled", title: "Enable EcoFeedback child device", type: "bool", defaultValue: true, description: "<small>EcoFeedback child device is only created if ecoFeedback data is received. Disabling will delete child device.</small>"
+    input name: "ecoFeedbackEnabled", title: "Enable Eco Feedback child device", type: "bool", defaultValue: true, description: "<small>Eco Feedback child device is only created if ecoFeedback data is received. Disabling will delete child device.</small>"
     input name: "lightEnabled", title: "Enable Light child device", type: "bool", defaultValue: true, description: "<small>Light child device is only created if light data is received. Disabling will delete child device.</small>"
-    input name: "ambientLightEnabled", title: "Enable AmbientLight child device", type: "bool", defaultValue: true, description: "<small>AmbientLight child device is only created if ambientLight data is received. Disabling will delete child device.</small>"
+    input name: "ambientLightEnabled", title: "Enable Ambient Light child device", type: "bool", defaultValue: true, description: "<small>Ambient Light child device is only created if ambientLight data is received. Disabling will delete child device.</small>"
     input name: "temperaturesEnabled", title: "Enable Temperature child devices", type: "bool", defaultValue: true, description: "<small>Up to three Temperature child devices may be created. Temperature child devices are only created if temperature data is received. Disabling will delete child devices.</small>"
-    input name: "coreTemperatureEnabled", title: "Enable CoreTemperature child device", type: "bool", defaultValue: true, description: "<small>CoreTemperature child device is only created if coreTemperature data is received. Disabling will delete child device.</small>"
+    input name: "coreTemperatureEnabled", title: "Enable Core Temperature child device", type: "bool", defaultValue: true, description: "<small>Core Temperature child device is only created if coreTemperature data is received. Disabling will delete child device.</small>"
     // other preferences
     input name: "debugEnabled", title: "Enable debug logging", type: "bool"
   }
