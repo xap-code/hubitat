@@ -40,7 +40,7 @@
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/drivers/Miele_Eco_Feedback_Child_Device.groovy",
       "required": true,
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     {
       "id": "d15ac048-28a1-49e2-a088-4f584e09a3b0",

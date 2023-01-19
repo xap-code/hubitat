@@ -15,7 +15,7 @@
  */
 
 /* ChangeLog:
- * 19/01/2023 - v1.0.0 - Initial implementation
+ * 19/01/2023 - v1.0.1 - Initial implementation
  */
 metadata {
   definition (name: "Miele Eco Feedback Child Device", namespace: "xap", author: "Ben Deitch") {
