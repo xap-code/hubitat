@@ -378,7 +378,7 @@ private deleteDisabledChildDevice(dniSuffix) {
   childDevice = getChildDevice(dni)
   if (childDevice) {
     deleteChildDevice(dni)
-    logInfo "Child device '${childDevice.name}' deleted [${dni}]"
+    logInfo "Child device '${childDevice.name}' deleted (dni=${dni})"
   }
 }
 
