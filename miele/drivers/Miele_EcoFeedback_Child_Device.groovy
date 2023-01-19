@@ -19,8 +19,8 @@
  */
 metadata {
   definition (name: "Miele EcoFeedback Child Device", namespace: "xap", author: "Ben Deitch") {
-    capability "Sensor"
     capability "EnergyMeter"
+    capability "Sensor"
 
     attribute "currentEnergyConsumption", "number"
     attribute "currentEnergyConsumptionText", "string"
