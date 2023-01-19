@@ -38,7 +38,7 @@
       "id": "f4c96198-e6ec-4b3d-add0-d9a76fac22bc",
       "name": "Miele Eco Feedback Child Device",
       "namespace": "xap",
-      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/drivers/Miele_Eco_Feedback_child_Device.groovy",
+      "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/miele/drivers/Miele_Eco_Feedback_Child_Device.groovy",
       "required": true,
       "version": "1.0.0"
     },
