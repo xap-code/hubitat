@@ -31,7 +31,7 @@ The first time the app is configured you will also see the "Miele Event Stream" 
 Each Miele@home device that is integrated with Hubitat is created as a "Miele Generic Device". This reflects the design approach used for the Miele 3rd Party API where a single generic device model is used for all device types. (More details on this design approach are provided at https://www.miele.com/developer/concept.html.)
 
 ### Miele Generic Device
-In v1 of Miele Integration the Miele Generic Device is fairly simple. It only advertises the "Sensor" device capability and some attributes which expose a subset of the Miele device state values. In future this will be extended with more state information and eventually the ability to invoke device actions.
+Currently the Miele Generic Device is read-only and just advertises the "Sensor" device capability and some attributes which expose a subset of the Miele device state values. In future this will be extended with the ability to invoke device actions.
 
 Attribute values are provided depending on if the associated device state information is available for a particular device received from the Miele 3rd Party API.
 #### Generic Device Attributes:
@@ -89,18 +89,92 @@ Attribute values are provided depending on if the associated device state inform
 - **`mobileStartEnabled`**  A boolean indicating if the device supports the Mobile Start option
 - **`smartGridEnabled`**  A boolean indicating if the device is set to Smart Grid mode
 
+#### Generic Device Child Devices:
+Most attributes are on the main device created for each Miele appliance. Some attributes are either repeated in the Miele data model (e.g. temperature) or occur on a small subset of the Miele device types. These attributes are not on the main device but instead are on child devices that are automatically created under the appliance's main device. Child devices are only created if the associated data is received for the appliance. The creation of child devices can also be enabled or disabled via the main device preferences. The following devices can be created:
+- **Eco Feedback** *[Miele Eco Feedback Child Device]*
+  - The Eco Feedback device is created if the Miele API returns ecoFeedback data for the device
+    - It is named after its parent device
+	  - e.g. `Dishwasher Eco Feedback`
+- **Light** *[Miele Light Child Device]*
+- **Ambient Light** *[Miele Light Child Device]*
+  - The Light and Ambient Light devices are created if the Miele API returns light, ambientLight data for the device
+    - They are named after their parent device
+	  - e.g. `Dishwasher Light`, `Cooker Hood Ambient Light`
+- **Temperature 1** *[Miele Temperature Child Device]*
+- **Temperature 2** *[Miele Temperature Child Device]*
+- **Temperature 3** *[Miele Temperature Child Device]*
+- **Core Temperature** *[Miele Temperature Child Device]*
+  - The temperature devices are created if the Miele API returns temperature, coreTemperature data for the device
+    - They are named after their parent device
+	  - e.g. `Oven Temperature 1`, `Oven Temperature 2`, `Oven Core Temperature`
+
+#### Generic Device Child Device Types:
+Child devices are created as one of the following device types:
+
+- **Miele Eco Feedback Child Device**
+  - (supports EnergyMonitor, Sensor capabilities)
+  - Attributes:
+    - **`energy`** The current energy consumption (this is a duplicate of `currentEnergyConsumption` in order to support the EnergyMonitor capability)
+      - e.g. `1.5`, `2.0`
+    - **`currentEnergyConsumption`** The current energy consumption
+      - e.g. `1.5`, `2.0`
+    - **`currentEnergyConsumptionText`** A string with the current energy consumption in the format "#.# kWh"
+      - e.g. `"1.5 kWh"`, `"2 kWh"`
+    - **`currentEnergyConsumptionDescription`** A string describing the current energy consumption
+      - e.g. `"current energy consumption is 1.5 kWh"`
+    - **`currentWaterConsumption`** The current water consumption
+      - e.g. `2.0`, `0.8`
+    - **`currentWaterConsumptionText`** A string with the current water consumption in the format "#.# l"
+      - e.g. `"2 l"`, `"0.8 l"`
+    - **`currentWaterConsumptionDescription`** A string describing the current water consumption
+      - e.g. `"current water consumption is 2 l"`
+    - **`energyForecast`** The relative energy forecast as a value between 0 and 1
+      - e.g. `0.1`, `0.5 `
+    - **`energyForecastText`** A string with the relative energy forecast as a percentage
+      - e.g. `"10%"`, `"50%"`
+    - **`energyForecastDescription`** A string describing the relative energy forecast
+      - e.g. `"10% energy usage forecast"`
+    - **`waterForecast`** The relative water forecast as a value between 0 and 1
+      - e.g. `0.1`, `0.5 `
+    - **`waterForecastText`** A string with the relative water forecast as a percentage
+    - e.g. `"10%"`, `"50%"`
+    - **`waterForecastDescription`** A string describing the relative water forecast
+      - e.g. `"10% water usage forecast"`
+  
+- **Miele Light Child Device**
+  - (supports Light, Sensor, Switch capabilities)
+  - **NB: The on() and off() commands currently do nothing on this device type**
+  - Attributes:
+    - **`switch`** Indicates if the light is `on` or `off`
+- **Miele Temperature Child Device**
+  - (supports Sensor, TemperatureMeasurement capabilities)
+  - Attributes:
+    - **`temperature`** The temperature in units determined by the Miele device locale (°C or °F)
+    - **`targetTemperature`** The target temperature in units determined by the Miele device locale (°C or °F)
+
 #### Generic Device Preferences:
-- Enable debug logging
-   - Output debug logs for the device (defaults to _false_)
+The following preferences can be set for each Miele appliance device:
 - Enable text events
    - Raise events for attributes that present values as simple text (attributes ending `...Text`) (defaults to _true_)
 - Enable description events
    - Raise events for attributes that present values as descriptive text (attributes ending `...Description`) (defaults to _true_)
+- Enable Eco Feedback child device
+   - Allows the Eco Feedback child device to be created if data is received for it. If created, the child device can be deleted by setting this preference to false. (defaults to _true_)
+- Enable Light child device
+   - Allows the Light child device to be created if data is received for it. If created, the child device can be deleted by setting this preference to false. (defaults to _true_)
+- Enable Ambient Light child device
+   - Allows the Ambient Light child device to be created if data is received for it. If created, the child device can be deleted by setting this preference to false. (defaults to _true_)
+- Enable Temperature child devices
+   - Allows up to three Temperature child devices to be created if data is received for them. If created, the child devices can be deleted by setting this preference to false. (defaults to _true_)
+- Enable Core Temperature child device
+   - Allows the Core Temperature child device to be created if data is received for it. If created, the child device can be deleted by setting this preference to false. (defaults to _true_)
+- Enable debug logging
+   - Output debug logs for the device (defaults to _false_)
 
   
 ## Future Releases
 Further releases are planned (no dates specified as this is implemented in my spare time). Functionality to be added:
-- Further device states to be included, as well as Hubitat child devices to allow easier use of properties related to lights and temperatures.
+- Further device states to be included.
 - Device command to allow the full device JSON to be read and used in other apps. e.g. webCoRE
 - Device commands to allow device actions available in the Miele 3rd Party API to be invoked.
 - Custom Hubitat device for Miele robot vacuums to expose state and actions specific to those devices only. e.g. battery, rooms
