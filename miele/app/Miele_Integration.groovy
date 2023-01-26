@@ -16,6 +16,7 @@
 
 /* ChangeLog:
  * 08/01/2023 - v1.0.0 - Initial read-only implementation without actions
+ * 26/01/2023 - v1.0.1 - Fix bug causing error if user moves back to main page from auth page and then re-authorizes
  */
 
 definition(
@@ -28,8 +29,8 @@ definition(
 )
 
 preferences {
-	page(name: "configure")
-	page(name: "authorize")
+	page(name: "mainPage")
+	page(name: "authPage")
 }
 
 mappings {
@@ -73,8 +74,8 @@ private buildLogMessage(message) {
   "[${app.name}] ${message}"
 }
 
-def configure() {
-  dynamicPage(name: "configure", title: "", install: true, uninstall: true) {
+def mainPage() {
+  dynamicPage(name: "mainPage", uninstall: true, install: true) {
     header()
 
     section {
@@ -85,7 +86,7 @@ def configure() {
         paragraph """<h2>Welcome</h2>To integrate your Miele@home devices with Hubitat please authorize this app to access the Miele 3rd Party API."""
         authDescription = "Authorize access to your Miele@home devices"
       }
-      href title: "Authorization", required: false, page: "authorize", description: authDescription
+      href title: "Authorization", required: false, page: "authPage", description: authDescription
     }
 
     if (state.clientAccessToken) {
@@ -116,7 +117,7 @@ def configure() {
   }
 }
 
-def authorize(params) {
+def authPage(params) {
 
   if (!state.accessToken) {
     createAccessToken()
@@ -129,14 +130,14 @@ def authorize(params) {
     }
   }
 
-  dynamicPage(name: "authorize", title: "", install: false, uninstall: false, nextPage: "configure") {
+  dynamicPage(name: "authPage", uninstall: false, install: false, nextPage: "mainPage") {
     header()
     section {
       paragraph """To authorize ${app.name} please enter your Client ID and Client Secret provided by Miele for use with the Miele 3rd Party API."""
       input "clientId", "string", title: "Client ID", required: false, submitOnChange: true
       input "clientSecret", "string", title: "Client Secret", required: false, submitOnChange: true
       if (state.clientAccessToken) {
-        href title: "Deauthorize", description: "Logout from Miele (NB: This will disable any integrated devices)", required: false, page: "authorize", params: ["logout": (context.logout ?: 0) + 1 ]
+        href title: "Deauthorize", description: "Logout from Miele (NB: This will disable any integrated devices)", required: false, page: "authPage", params: ["logout": (context.logout ?: 0) + 1 ]
       } else if (clientId && clientSecret) {
         href title: "Authorize", description: "Login to Miele", required: false, url: buildLoginUrl(), style: "external"
       }

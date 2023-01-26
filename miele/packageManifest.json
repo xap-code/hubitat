@@ -2,7 +2,7 @@
   "packageName": "Miele Integration",
   "author": "Ben Deitch",
   "minimumHEVersion": "2.3",
-  "dateReleased": "2022-01-14",
+  "dateReleased": "2023-01-26",
   "documentationLink": "https://github.com/xap-code/hubitat/blob/master/miele/README.md",
   "communityLink": "https://community.hubitat.com/t/release-miele-integration/110159",
   "apps": [
@@ -14,7 +14,7 @@
       "required": true,
       "oauth": true,
       "primary": true,
-      "version": "1.0.0"
+      "version": "1.0.1"
     }
   ],
   "drivers": [
