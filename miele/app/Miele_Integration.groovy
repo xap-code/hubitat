@@ -17,6 +17,7 @@
 /* ChangeLog:
  * 08/01/2023 - v1.0.0 - Initial read-only implementation without actions
  * 26/01/2023 - v1.0.1 - Fix bug causing error if user moves back to main page from auth page and then re-authorizes
+ * 29/01/2023 - v1.0.2 - Log event message content if unable to parse JSON
  */
 
 definition(
@@ -41,6 +42,7 @@ mappings {
     }
 }
 
+import groovy.json.JsonException
 import groovy.transform.Field
   
 // define constants
@@ -239,9 +241,11 @@ def createGenericDevice(mieleDevice) {
 }
 
 def eventReceived(message) {
-  
-  data = parseJson(message)
-  
+  try {
+    data = parseJson(message)
+  } catch (JsonException ex) {
+    logError "Unable to parse received JSON: ${ex.message} --> ${message}"
+  }
   // only pass on state update events
   data
   .findAll { id, json -> json.state }
