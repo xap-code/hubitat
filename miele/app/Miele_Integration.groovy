@@ -421,5 +421,5 @@ private scheduleRefreshToken(interval) {
 def parseJsonLax(json) {
   slurper = new JsonSlurper()
   slurper.setType(slurper.getType().valueOf("LAX"))
-  slurper.parseText(message)
+  slurper.parseText(json)
 }
