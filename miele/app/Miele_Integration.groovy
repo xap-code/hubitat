@@ -18,6 +18,7 @@
  * 08/01/2023 - v1.0.0 - Initial read-only implementation without actions
  * 26/01/2023 - v1.0.1 - Fix bug causing error if user moves back to main page from auth page and then re-authorizes
  * 29/01/2023 - v1.0.2 - Log event message content if unable to parse JSON
+ * 29/01/2023 - v1.0.3 - Switch to LAX JsonSlurper for JSON parsing
  */
 
 definition(
@@ -43,6 +44,7 @@ mappings {
 }
 
 import groovy.json.JsonException
+import groovy.json.JsonSlurper
 import groovy.transform.Field
   
 // define constants
@@ -242,7 +244,7 @@ def createGenericDevice(mieleDevice) {
 
 def eventReceived(message) {
   try {
-    data = parseJson(message)
+    data = parseJsonLax(message)
   } catch (JsonException ex) {
     logError "Unable to parse received JSON: ${ex.message} --> ${message}"
   }
@@ -412,4 +414,12 @@ private updateAccessToken(data) {
 private scheduleRefreshToken(interval) {
   refreshInterval = Math.max(REFRESH_TOKEN_MINIMUM_SECONDS, interval - REFRESH_TOKEN_EARLY_SECONDS)
   runIn(refreshInterval, "refreshToken")
+}
+
+// ** JSON **
+
+def parseJsonLax(json) {
+  slurper = new JsonSlurper()
+  slurper.setType(slurper.getType().valueOf("LAX"))
+  slurper.parseText(message)
 }
