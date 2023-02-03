@@ -19,6 +19,7 @@
  * 26/01/2023 - v1.0.1 - Fix bug causing error if user moves back to main page from auth page and then re-authorizes
  * 29/01/2023 - v1.0.2 - Log event message content if unable to parse JSON
  * 29/01/2023 - v1.0.3 - Switch to LAX JsonSlurper for JSON parsing
+ * 31/01/2023 - v1.0.4 - Fix Miele get devices failure error handling
  */
 
 definition(
@@ -97,7 +98,7 @@ def mainPage() {
       generateDeviceActions()
       section {
         if (context.devicesError) {
-          paragraph """<span style="color: darkred; font-weight: bold">${state.devicesError}</span>"""
+          paragraph """<span style="color: darkred; font-weight: bold">${context.devicesError}</span>"""
         } else {
           paragraph """Select the Miele devices that you want to integrate with Hubitat (${context.deviceActions?.mieleDevices?.size()?:0} devices discovered):"""
           input name: "selectedDevices", title: "", type: "enum", multiple: true, options: getDeviceOptions(), submitOnChange: true
@@ -285,8 +286,10 @@ private getMieleDevices() {
   
   try {
     httpGet(params) { response -> handleMieleDevicesResponse(response) }
-  } catch (groovyx.net.http.HttpResponseException e) {
-    context.devicesError = "Unable to get Miele devices -- ${e.getLocalizedMessage()}: ${e.response.data}"
+  } catch (groovyx.net.http.HttpResponseException ex) {
+    context.devicesError = "Unable to get Miele devices -- ${ex.getLocalizedMessage()}: ${ex.response.data}"
+  } catch (Exception ex) {
+    context.devicesError = "Unable to get Miele devices -- ${ex.getMessage()}"
   }
 }
 
