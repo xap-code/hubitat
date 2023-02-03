@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 03/02/2023 - v2.4 - Add activity attribute for use with Google Home Community integration
  * 12/01/2023 - v2.3 - Add parameter to delay TTS playback
  * 01/06/2022 - v2.2.1 - Refresh synchronized players when playlist is cleared.
  * 01/06/2022 - v2.2 - Update commands to better match Hubitat capability specifications. Fix bug where slave players not updating status correctly.
@@ -51,7 +52,7 @@
  * 14/10/2018 - Bugfix - Track resume not taking into account previous track time position
  * 14/10/2018 - Added support for player synchronization
  * 13/10/2018 - Added support for password protection
-*/
+ */
 metadata {
   definition (
     name: "Squeezebox Player",
@@ -70,6 +71,7 @@ metadata {
 
     attribute "repeat", "ENUM", REPEAT_MODE
     attribute "shuffle", "ENUM", SHUFFLE_MODE
+    attribute "activity", "ENUM", ["active", "inactive", "standby"]
     
     command "clearPlaylist"
     command "fav1"
@@ -297,6 +299,7 @@ private updatePower(onOff) {
   if (current != onOffString) {
 
     sendEvent(name: "switch", value: onOffString, displayed: true)
+    updateActivityFromPower(isOn)
     return true
  
   } else {
@@ -335,6 +338,7 @@ private updatePlayPause(playPause) {
   }
 
   sendEvent(name: "status", value: status, displayed: true)
+  updateActivityFromStatus(status)
 }
 
 private updateRepeat(repeat) {
@@ -376,6 +380,16 @@ private updateSyncGroup(syncMaster, syncSlaves) {
 private updateAlarms(alarms) {
   def alarmsSwitch = getChildDevice(alarmsSwitchDni)
   alarmsSwitch?.update(alarms == "1")
+}
+
+private updateActivityFromPower(isOn) {
+  sendEvent(name: "activity", value: isOn ? "standby" : "inactive", displayed: true)
+}
+
+private updateActivityFromStatus(status) {
+  if (attribute("switch") == "on") {
+    sendEvent(name: "activity", value: status == "stopped" ? "standby" : "active", displayed: true)
+  }
 }
 
 /************
