@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 12/02/2023 - v2.3 - Remove player power child switch
  * 26/11/2022 - v2.2.1 - Replace app name literal with app.name
  * 01/06/2022 - v2.2 - Add support for better synchronized player updates
  * 27/09/2021 - v2.1 - Indicate connection status on app label
@@ -68,17 +69,7 @@ preferences {
       input(name: "debugLogging", type: "bool", title: "Enable debug logging?", defaultValue: false, required: false)
     }
   }
-  page(name: "playersPage", title: "<h2>Select Squeezebox Players</h2>", nextPage: "playerOptionsPage", install: false, uninstall: false)
-  page(name: "playerOptionsPage", title: "<h2>Player Options</h2>", install: true, uninstall: false) {
-    section("<h3>Enable/Disable Alarms Switch</h3>") {
-      paragraph("Selected players will create a child switch device which can be used to enable/disable all alarms on that player.")
-      input(name: "createAlarmsSwitchPlayers", type: "enum", title: "Create Alarms Switch For Players", multiple: true, options: selectedPlayers)
-    }
-    section("<h3>Enable/Disable Extra Power Switch</h3>") {
-      paragraph("Selected players will create a child switch device which can be used to switch that player on or off. This is an extra switch that can be used to link the player with Google Home to switch it on and off without Google mistaking the player as a light.")
-      input(name: "createPowerSwitchPlayers", type: "enum", title: "Create Power Switch For Players", multiple: true, options: selectedPlayers)
-    }
-  }
+  page(name: "playersPage", title: "<h2>Select Squeezebox Players</h2>", install: true, uninstall: false)
 }
 
 def playersPage() {
@@ -104,6 +95,10 @@ def playersPage() {
       paragraph("If configured, adds the specified suffix after each player device name when creating child devices for each Squeezebox.")
       input(name: "deviceNameSuffix", type: "string", title: "Device Name Suffix", required: false)
       paragraph("NB: Spaces need to be explicitly included if required.")
+    }
+    section("<h3>Enable/Disable Alarms Switch</h3>") {
+      paragraph("Selected players will create a child switch device which can be used to enable/disable all alarms on that player.")
+      input(name: "createAlarmsSwitchPlayers", type: "enum", title: "Create Alarms Switch For Players", multiple: true, options: selectedPlayers)
     }
   }
 }
@@ -203,7 +198,7 @@ private initializePlayers() {
       )
     }
     // always configure the player in case the server settings have changed
-    player.configure(createAlarmsSwitchPlayers?.contains(it.name), createPowerSwitchPlayers?.contains(it.name))
+    player.configure(createAlarmsSwitchPlayers?.contains(it.name))
   }
   
   // delete any child devices for players that are no longer selected

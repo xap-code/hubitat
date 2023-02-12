@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 12/02/2023 - v2.5 - Remove player power child switch
  * 03/02/2023 - v2.4 - Add activity attribute for use with Google Home Community integration
  * 12/01/2023 - v2.3 - Add parameter to delay TTS playback
  * 01/06/2022 - v2.2.1 - Refresh synchronized players when playlist is cleared.
@@ -126,16 +127,11 @@ def getAlarmsSwitchDni() {
   "${device.deviceNetworkId}-alarms"
 }
 
-def getPowerSwitchDni() {
-  "${device.deviceNetworkId}-power"
-}
-
-def configure(createAlarmsSwitch, createPowerSwitch) {
+def configure(createAlarmsSwitch) {
     
   configureChildSwitch(createAlarmsSwitch, alarmsSwitchDni, "All Alarms")
-  configureChildSwitch(createPowerSwitch, powerSwitchDni, "Power")
       
-  log "Configured with [createAlarmsSwitch: ${createAlarmsSwitch}, createPowerSwitch: ${createPowerSwitch}]"
+  log "Configured with [createAlarmsSwitch: ${createAlarmsSwitch}]"
 }
 
 def processMessage(String[] msg) {
@@ -292,9 +288,6 @@ private updatePower(onOff) {
   boolean isOn = String.valueOf(onOff) == "1";
   String onOffString = isOn ? "on" : "off"
   String current = attribute("switch")
-
-  def powerSwitch = getChildDevice(powerSwitchDni)
-  powerSwitch?.update(isOn)
 
   if (current != onOffString) {
 
@@ -470,7 +463,6 @@ private setUriAndRefresh(uri) {
   refreshStatus()
 }
 
-private 
 def play() {
   log "play()"
   sendCommand(["play"])
@@ -816,9 +808,7 @@ def shuffle(shuffle=null) {
 
 def childSwitchedOn(childDni) {
   
-  if (childDni == powerSwitchDni) {
-    on()
-  } else if (childDni == alarmsSwitchDni) {
+  if (childDni == alarmsSwitchDni) {
     enableAlarms()
   } else {
     log.warn "childSwitchedOn invoked by unrecognised device: ${childDni}"
@@ -827,9 +817,7 @@ def childSwitchedOn(childDni) {
 
 def childSwitchedOff(childDni) {
 
-  if (childDni == powerSwitchDni) {
-    off()
-  } else if (childDni == alarmsSwitchDni) {
+  if (childDni == alarmsSwitchDni) {
     disableAlarms()
   } else {
     log.warn "childSwitchedOff invoked by unrecognised device: ${childDni}"

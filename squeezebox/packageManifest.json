@@ -2,7 +2,7 @@
   "packageName": "Squeezebox Connect",
   "author": "Ben Deitch",
   "minimumHEVersion": "2.2",
-  "dateReleased": "2023-02-03",
+  "dateReleased": "2023-02-12",
   "documentationLink": "https://github.com/xap-code/hubitat/blob/master/squeezebox/README.md",
   "communityLink": "https://community.hubitat.com/t/release-squeezebox-integration-logitech-media-server/4489",
   "apps": [
@@ -14,7 +14,7 @@
       "required": true,
       "oauth": false,
       "primary": true,
-      "version": "2.2.1"
+      "version": "2.3"
     }
   ],
   "drivers": [
@@ -32,7 +32,7 @@
       "namespace": "xap",
       "location": "https://raw.githubusercontent.com/xap-code/hubitat/master/squeezebox/drivers/squeezebox-player.groovy",
       "required": true,
-      "version": "2.4"
+      "version": "2.5"
     },
     {
       "id": "974932f7-65b1-4f99-a56b-4ee3d3265f5a",
