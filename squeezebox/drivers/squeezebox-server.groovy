@@ -15,6 +15,7 @@
  */
 
 /* ChangeLog:
+ * 01/03/2023 - v2.2.3 - Fix possible connection bouncing when switching device off()
  * 09/11/2021 - v2.2.2 - Catch any Exception for connection retry
  * 27/09/2021 - v2.2.1 - Add 'newmetadata' to subscription to update track details when listening to stream
  * 27/09/2021 - v2.2 - Indicate connection status on app label
@@ -32,7 +33,7 @@ metadata {
   ) {
     capability "Actuator"
     capability "Initialize"
-	capability "Sensor"
+    capability "Sensor"
     capability "Switch"
     capability "Telnet"
   }
@@ -45,38 +46,23 @@ def log(message) {
 }
 
 def installed() {
-  initialize()
+  connect()
 }
 
 def uninstalled() {
-  telnetClose()
+  disconnect()
 }
 
 def initialize() {
-  try {
-    telnetClose()
-    telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
-    log.info "Squeezebox CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
-    if (parent.isPasswordProtected()) {
-      sendLogin()
-    }
-    sendSubscribe()
-    setConnected(true)
-  } catch (Exception ex) {
-    setConnected(false)
-    runIn(60, "initialize")
-    log.error("Unable to connect to CLI (will reattempt in 1 minute): ${ex.getMessage()}")
-  }
+  connect()
 }
 
 def on() {
-  initialize()
+  connect()
 }
 
 def off() {
-  unschedule()
-  telnetClose()
-  setConnected(false)
+  disconnect()
 }
 
 def parse(message) {
@@ -93,9 +79,13 @@ def parse(message) {
 }
 
 def telnetStatus(message) {
-  log.error "CLI Connection Failure (${parent.isPasswordProtected() ? "check username/password correct; ": ""}attempting to reconnect): ${message}"
-  runIn(10, "initialize")
   setConnected(false)
+  if (state.connect) {
+    log.error "CLI Connection Failure (${parent.isPasswordProtected() ? "check username/password correct; ": ""}attempting to reconnect): ${message}"
+    runIn(10, "connect")
+  } else {
+    log "CLI Connection Closed"
+  }
 }
 
 def sendMsg(message) {
@@ -105,6 +95,34 @@ def sendMsg(message) {
   } else {
     log.warn "Cannot send message while disconnected, connect using initialise() or on()"
   }
+}
+
+private connect() {
+  state.connect = true
+  reset()
+  try {
+    telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
+    log.info "Squeezebox CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
+    if (parent.isPasswordProtected()) {
+      sendLogin()
+    }
+    sendSubscribe()
+    setConnected(true)
+  } catch (Exception ex) {
+    setConnected(false)
+    runIn(60, "connect")
+    log.error("Unable to connect to CLI (will reattempt in 1 minute): ${ex.getMessage()}")
+  }
+}
+
+private disconnect() {
+  state.connect = false
+  reset()
+}
+
+private reset() {
+  unschedule()
+  telnetClose()
 }
 
 private send(message) {
