@@ -98,7 +98,6 @@ def sendMsg(message) {
 }
 
 private connect() {
-  disconnect()
   state.connect = true
   try {
     telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
