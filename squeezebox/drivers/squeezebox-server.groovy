@@ -98,8 +98,8 @@ def sendMsg(message) {
 }
 
 private connect() {
+  disconnect()
   state.connect = true
-  reset()
   try {
     telnetConnect parent.serverIP, parent.getServerCliPort(), null, null
     log.info "Squeezebox CLI Connected: ${parent.serverIP}:${parent.getServerCliPort()}"
@@ -117,10 +117,6 @@ private connect() {
 
 private disconnect() {
   state.connect = false
-  reset()
-}
-
-private reset() {
   unschedule()
   telnetClose()
 }
